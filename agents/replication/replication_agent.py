@@ -46,6 +46,8 @@ class ReplicationAgent(GenericAgent):
         """
         if action['action'] == 'freeze':
             self._handle_freeze_action(action, method)
+        elif action['action'] == 'repair':
+            self._handle_repair_action(action, method)
         else:
             self._logger.error('Action type = %s is not something we can handle...' % action['action'])
 
@@ -57,6 +59,18 @@ class ReplicationAgent(GenericAgent):
                 self._process_replication(action)
             except Exception as e:
                 self._logger.exception('Replication processing failed')
+                self._republish_or_fail_action(method, action, 'replication', e)
+                return
+        self._ack_message(method)
+
+    def _handle_repair_action(self, action, method):
+        if self._sub_action_processed(action, 'replication'):
+            self._logger.info('Replication repair already processed')
+        else:
+            try:
+                self._process_replication_repair(action)
+            except Exception as e:
+                self._logger.exception('Replication repair failed')
                 self._republish_or_fail_action(method, action, 'replication', e)
                 return
         self._ack_message(method)
@@ -148,6 +162,13 @@ class ReplicationAgent(GenericAgent):
         replicated_checksum = self._get_file_checksum(dest_path)
         if node['checksum'] != replicated_checksum:
             raise Exception('Checksum mismatch after replication for node: %s' % node['pid'])
+
+    def _process_replication_repair(self, action):
+        # todo according to https://jira.eduuni.fi/browse/CSCIDA-283
+        # no need to contact metax at all
+        self._logger.info('Processing replication repair...')
+        self._save_action_completion_timestamp(action, 'replication')
+        self._logger.info('Replication repair OK')
 
     def _republish_or_fail_action(self, method, action, sub_action_name, exception):
         """

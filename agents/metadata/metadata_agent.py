@@ -43,6 +43,8 @@ class MetadataAgent(GenericAgent):
             self._handle_freeze_action(action, method)
         elif action['action'] in ('unfreeze', 'delete'):
             self._handle_unfreeze_action(action, method)
+        elif action['action'] == 'repair':
+            self._handle_repair_action(action, method)
         else:
             self._logger.error('Action type = %s is not something we can handle...' % action['action'])
 
@@ -94,6 +96,36 @@ class MetadataAgent(GenericAgent):
                 self._process_metadata_deletion(action)
             except Exception as e:
                 self._logger.exception('Metadata deletion failed')
+                self._republish_or_fail_action(method, action, 'metadata', e)
+                return
+        self._ack_message(method)
+
+    def _handle_repair_action(self, action, method):
+
+        # nodes downloaded during checksums processing can probably be
+        # re-used for metadata repair in this method.
+        nodes = None
+
+        if self._sub_action_processed(action, 'checksums'):
+            self._logger.info('Checksums already processed')
+        else:
+            try:
+                nodes = self._process_checksums(action)
+            except Exception as e:
+                self._logger.exception('Checksum processing failed')
+                self._republish_or_fail_action(method, action, 'checksums', e)
+                return
+
+        if self._complete_actions_without_metax():
+            self._logger.info('Note: Completing action without Metax')
+            self._save_action_completion_timestamp(action, 'metadata')
+        elif self._sub_action_processed(action, 'metadata'):
+            self._logger.info('Metadata repair already processed')
+        else:
+            try:
+                self._process_metadata_repair(action, nodes)
+            except Exception as e:
+                self._logger.exception('Metadata repair failed')
                 self._republish_or_fail_action(method, action, 'metadata', e)
                 return
         self._ack_message(method)
@@ -244,6 +276,24 @@ class MetadataAgent(GenericAgent):
         self._save_action_completion_timestamp(action, 'replication')
 
         self._logger.info('Metadata deletion OK')
+
+    def _process_checksums_repair(self, action, nodes):
+        # todo according to https://jira.eduuni.fi/browse/CSCIDA-283
+        # no need to contact metax at all
+        self._logger.info('Processing chceksums repair...')
+        self._save_action_completion_timestamp(action, 'checksums')
+        self._logger.info('Checksums repair OK')
+
+    def _process_metadata_repair(self, action, nodes):
+        # todo according to https://jira.eduuni.fi/browse/CSCIDA-283
+        # looks like the new repair spec for metadata repair is basically
+        # what repair-metadata script does when executed with the
+        # "exhaustive" parameter.
+        #
+        # probably try to re use parts of repair-metadata script here somehow.
+        self._logger.info('Processing metadata repair...')
+        self._save_action_completion_timestamp(action, 'metadata')
+        self._logger.info('Metadata repair OK')
 
     def _metax_api_request(self, method, detail_url, data=None):
         headers = {
