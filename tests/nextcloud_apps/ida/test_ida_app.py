@@ -49,6 +49,9 @@ class TestIdaApp(unittest.TestCase):
         # keep track of success, for reference in tearDown
         self.success = False
 
+        # timeout when waiting for actions to complete (5 minutes)
+        self.timeout = 1300
+
         print("(initializing)")
 
         # ensure we start with a fresh setup of projects, user accounts, and data
@@ -166,18 +169,19 @@ class TestIdaApp(unittest.TestCase):
 
         print("--- Unfreeze Actions")
 
-        # wait until previous action is complete, checking once per second, with timeout of 1 minute...
-
-        print("(waiting for previous action to fully complete) ", end='')
-        max_time = time.time() + 60
-        while action_data.get("completed", None) == None and time.time() < max_time:
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
-            response = requests.get("%s/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_a, verify=False)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertIsNotNone(action_data.get("completed", None))
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Unfreeze single frozen file")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test01.dat"
@@ -301,6 +305,8 @@ class TestIdaApp(unittest.TestCase):
         print("Freeze one additional file to folder with max allowed files")
         data["pathname"] = "/MaxFiles/test_file.dat"
         response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
+        action_data = response.json()
+        action_pid = action_data["pid"]
         self.assertEqual(response.status_code, 200)
 
         print("Attempt to unfreeze a frozen folder with more than max allowed files")
@@ -313,20 +319,76 @@ class TestIdaApp(unittest.TestCase):
         response = requests.post("%s/delete" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 400)
 
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
+            time.sleep(1)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+            self.assertEqual(response.status_code, 200)
+            actions = response.json()
+        print("")
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
+
         print("Unfreeze a folder with max allowed files")
         data["pathname"] = "/MaxFiles/500_files"
         response = requests.post("%s/unfreeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200, response.text)
+
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
+            time.sleep(1)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+            self.assertEqual(response.status_code, 200)
+            actions = response.json()
+        print("")
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Freeze a folder with max allowed files")
         data["pathname"] = "/MaxFiles/500_files"
         response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
 
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
+            time.sleep(1)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+            self.assertEqual(response.status_code, 200)
+            actions = response.json()
+        print("")
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
+
         print("Delete a folder with max allowed files")
         data["pathname"] = "/MaxFiles/500_files"
         response = requests.post("%s/delete" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
+
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
+            time.sleep(1)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+            self.assertEqual(response.status_code, 200)
+            actions = response.json()
+        print("")
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         # --------------------------------------------------------------------------------
 
@@ -429,6 +491,20 @@ class TestIdaApp(unittest.TestCase):
         response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
 
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
+            time.sleep(1)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+            self.assertEqual(response.status_code, 200)
+            actions = response.json()
+        print("")
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
+
         print("Retrieve frozen file details by pathname")
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -453,7 +529,7 @@ class TestIdaApp(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
         print("Update checksum")
-        data = {"checksum": "2000-01-01T00:00:00Z"}
+        data = {"checksum": "thisisatestdummychecksum"}
         response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_pid), json=data, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_data = response.json()
@@ -555,17 +631,19 @@ class TestIdaApp(unittest.TestCase):
         self.assertEqual(action_data["project"], data["project"])
         self.assertEqual(action_data["pathname"], data["pathname"])
 
-        print("(waiting for previous action to fully complete) ", end='')
-        max_time = time.time() + 60
-        while action_data.get("completed", None) == None and time.time() < max_time:
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
-            response = requests.get("%s/action/%s" % (self.config["IDA_API_ROOT_URL"], action_pid), auth=test_user_a, verify=False)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertEqual(action_data["pid"], action_pid)
-        self.assertIsNotNone(action_data.get("completed", None))
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Update action as failed, clearing postprocessing timestamps")
         data = {
@@ -626,17 +704,19 @@ class TestIdaApp(unittest.TestCase):
         self.assertIsNone(action_data.get("cleared", None))
         action_pid = retry_action_pid
 
-        print("(waiting for retry action to fully complete) ", end='')
-        max_time = time.time() + 60
-        while action_data.get("completed", None) == None and time.time() < max_time:
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
-            response = requests.get("%s/action/%s" % (self.config["IDA_API_ROOT_URL"], action_pid), auth=test_user_a, verify=False)
+            response = requests.get("%s/actions?project=test_project_a&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_a, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertEqual(action_data["pid"], action_pid)
-        self.assertIsNotNone(action_data.get("completed", None))
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Verify set of failed actions is empty")
         data = {"project": "test_project_a", "status": "failed"}
@@ -981,6 +1061,20 @@ class TestIdaApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         action_data = response.json() # For use in subsequent action collision tests below
 
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_c&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_c, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
+            time.sleep(1)
+            response = requests.get("%s/actions?project=test_project_c&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_c, verify=False)
+            self.assertEqual(response.status_code, 200)
+            actions = response.json()
+        print("")
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
+
         print("Simulate incomplete action")
         # Simulate incomplete freeze action by removing all step timestamps from preceeding action following pids timestamp
         # (frozen pending action pathname = "/2017-11/Experiment_6")
@@ -1143,6 +1237,8 @@ class TestIdaApp(unittest.TestCase):
 
         print("--- Repair Actions")
 
+        # TODO add checks for postprocessing results once repair handling is added to postprocessing agents
+
         admin_user = (self.config["NC_ADMIN_USER"], self.config["NC_ADMIN_PASS"])
         pso_user_d = (self.config["PROJECT_USER_PREFIX"] + "test_project_d", "test")
         test_user_d = ("test_user_d", "test")
@@ -1152,21 +1248,24 @@ class TestIdaApp(unittest.TestCase):
         response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_d, verify=False)
         self.assertEqual(response.status_code, 200)
         action_data = response.json()
+        action_pid = action_data["pid"]
         self.assertEqual(action_data["action"], "freeze")
         self.assertEqual(action_data["project"], data["project"])
         self.assertEqual(action_data["pathname"], data["pathname"])
 
-        # Wait until previous action is complete, checking once per second, with timeout of 1 minute...
-        print("(waiting for previous action to fully complete) ", end='')
-        max_time = time.time() + 60
-        while action_data.get("completed", None) == None and time.time() < max_time:
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_d&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_d, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
-            response = requests.get("%s/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_d, verify=False)
+            response = requests.get("%s/actions?project=test_project_d&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_d, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertIsNotNone(action_data.get("completed", None))
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Retrieve details of all frozen files associated with freeze action")
         response = requests.get("%s/files/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_d, verify=False)
@@ -1188,20 +1287,23 @@ class TestIdaApp(unittest.TestCase):
         response = requests.post("%s/repair" % self.config["IDA_API_ROOT_URL"], auth=pso_user_d, verify=False)
         self.assertEqual(response.status_code, 200)
         action_data = response.json()
+        action_pid = action_data["pid"]
         self.assertEqual(action_data["action"], "repair")
         self.assertEqual(action_data["pathname"], "/")
 
-        # Wait until previous action is complete, checking once per second, with timeout of 1 minute...
-        print("(waiting for previous action to fully complete) ", end='')
-        max_time = time.time() + 60
-        while action_data.get("completed", None) == None and time.time() < max_time:
+        print("(waiting for pending actions to fully complete)")
+        response = requests.get("%s/actions?project=test_project_d&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_d, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
-            response = requests.get("%s/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_d, verify=False)
+            response = requests.get("%s/actions?project=test_project_d&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_d, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertIsNotNone(action_data.get("completed", None))
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Retrieve details of all frozen files associated with repair action")
         response = requests.get("%s/files/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_d, verify=False)
@@ -1248,20 +1350,19 @@ class TestIdaApp(unittest.TestCase):
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        # Wait until previous action is complete, checking once per second, with timeout of 1 minute...
-        print("(waiting for previous action to fully complete) ", end='')
+        print("(waiting for pending actions to fully complete)")
         response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
         self.assertEqual(response.status_code, 200)
-        action_data = response.json()
-        max_time = time.time() + 60
-        while len(action_data) > 0 and time.time() < max_time:
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
             response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertEqual(len(action_data), 0)
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Verify data was physically moved from staging to frozen area")
         self.assertFalse(os.path.exists("%s/MaxFiles/500_files/500_files_1/100_files_1/10_files_1/test_file_1.dat" % (staging_area_root)))
@@ -1273,20 +1374,19 @@ class TestIdaApp(unittest.TestCase):
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        # Wait until previous action is complete, checking once per second, with timeout of 1 minute...
-        print("(waiting for previous action to fully complete) ", end='')
+        print("(waiting for pending actions to fully complete)")
         response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
         self.assertEqual(response.status_code, 200)
-        action_data = response.json()
-        max_time = time.time() + 60
-        while len(action_data) > 0 and time.time() < max_time:
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
             response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertEqual(len(action_data), 0)
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Verify data was physically moved from frozen to staging area")
         self.assertFalse(os.path.exists("%s/MaxFiles/500_files/500_files_1/100_files_1/10_files_1/test_file_1.dat" % (frozen_area_root)))
@@ -1298,40 +1398,38 @@ class TestIdaApp(unittest.TestCase):
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        # Wait until previous action is complete, checking once per second, with timeout of 1 minute...
-        print("(waiting for previous action to fully complete) ", end='')
+        print("(waiting for pending actions to fully complete)")
         response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
         self.assertEqual(response.status_code, 200)
-        action_data = response.json()
-        max_time = time.time() + 60
-        while len(action_data) > 0 and time.time() < max_time:
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
             response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertEqual(len(action_data), 0)
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Batch delete a folder with more than max allowed files")
         cmd = "%s test_project_b delete /MaxFiles >/dev/null" % (cmd_base)
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        # Wait until previous action is complete, checking once per second, with timeout of 1 minute...
-        print("(waiting for previous action to fully complete) ", end='')
+        print("(waiting for pending actions to fully complete)")
         response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
         self.assertEqual(response.status_code, 200)
-        action_data = response.json()
-        max_time = time.time() + 60
-        while len(action_data) > 0 and time.time() < max_time:
+        actions = response.json()
+        max_time = time.time() + self.timeout
+        while len(actions) > 0 and time.time() < max_time:
+            print(".", end='', flush=True)
             time.sleep(1)
             response = requests.get("%s/actions?project=test_project_b&status=pending" % (self.config["IDA_API_ROOT_URL"]), auth=test_user_b, verify=False)
             self.assertEqual(response.status_code, 200)
-            action_data = response.json()
-            print(".", end='')
+            actions = response.json()
         print("")
-        self.assertEqual(len(action_data), 0)
+        self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
         print("Verify data was physically removed from frozen area")
         self.assertFalse(os.path.exists("%s/MaxFiles" % (frozen_area_root)))
@@ -1343,4 +1441,3 @@ class TestIdaApp(unittest.TestCase):
 
         # --------------------------------------------------------------------------------
         # TODO: consider which tests may be missing...
-

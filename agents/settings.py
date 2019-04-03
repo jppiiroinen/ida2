@@ -27,7 +27,7 @@ ONE_DAY = ONE_HOUR * 24
 ONE_WEEK = ONE_HOUR * 7
 
 """
-Prodcution settings are used whenever the application is executed 'normally',
+Production settings are used whenever the application is executed 'normally',
 i.e. not within a test suite
 """
 production = {
@@ -40,7 +40,8 @@ production = {
     "log_level": "DEBUG", # python logger log level names are valid values
 
     # when continuously consuming queues, sleep how many seconds between messages
-    "main_loop_delay": 10,
+    #"main_loop_delay": 10,
+    "main_loop_delay": 0.1,
 
     # retry policies for various actions made by the agents during rabbitmq
     # message processing.
@@ -57,16 +58,22 @@ production = {
         # exceeding max_retries will result in the action being marked as failed, and
         # the agents will make no more autonomous attempts to complete the action.
         "checksums": {
-            "max_retries": 3,
-            "retry_interval": 10, # seconds
+            #"max_retries": 3,
+            #"retry_interval": 10, # seconds
+            "max_retries": 10,
+            "retry_interval": 1, # seconds
         },
         "metadata": {
-            "max_retries": 3,
-            "retry_interval": 10,
+            #"max_retries": 3,
+            #"retry_interval": 10,
+            "max_retries": 10,
+            "retry_interval": 1,
         },
         "replication": {
-            "max_retries": 3,
-            "retry_interval": 10,
+            #"max_retries": 3,
+            #"retry_interval": 10,
+            "max_retries": 10,
+            "retry_interval": 1,
         },
 
         # general http requests sent to http services. a simple loop for retry,
@@ -77,6 +84,11 @@ production = {
         "http_request": {
             "max_retries": 10,
             "retry_intervals": [
+                1,
+                1,
+                1,
+                1,
+                1,
                 3,
                 10,
                 60,
@@ -94,6 +106,11 @@ production = {
         "rabbitmq_errors": {
             "max_retries": 10,
             "retry_intervals": [
+                1,
+                1,
+                1,
+                1,
+                1,
                 3,
                 10,
                 60,
@@ -111,7 +128,8 @@ test = {
     "server_configuration_path": "agents/tests/config/config.sh",
 
     "log_level": "DEBUG",
-    "main_loop_delay": 10,
+
+    "main_loop_delay": 5,
 
     "retry_policy": {
         "checksums": {

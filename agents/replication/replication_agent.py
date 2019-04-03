@@ -119,6 +119,7 @@ class ReplicationAgent(GenericAgent):
 
         self.last_number_of_files_replicated = files_copied
         self._save_action_completion_timestamp(action, 'replication')
+        self._save_action_completion_timestamp(action, 'completed')
         self._logger.info('Replication processing OK')
 
     def _check_replication_root_is_mounted(self):
@@ -168,6 +169,7 @@ class ReplicationAgent(GenericAgent):
         # no need to contact metax at all
         self._logger.info('Processing replication repair...')
         self._save_action_completion_timestamp(action, 'replication')
+        self._save_action_completion_timestamp(action, 'completed')
         self._logger.info('Replication repair OK')
 
     def _republish_or_fail_action(self, method, action, sub_action_name, exception):

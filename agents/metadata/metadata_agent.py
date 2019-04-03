@@ -89,6 +89,8 @@ class MetadataAgent(GenericAgent):
     def _handle_unfreeze_action(self, action, method):
         if self._complete_actions_without_metax():
             self._logger.info('Note: Completing action without Metax')
+            self._save_action_completion_timestamp(action, 'metadata')
+            self._save_action_completion_timestamp(action, 'completed')
         elif self._sub_action_processed(action, 'metadata'):
             self._logger.info('Metadata already processed')
         else:
@@ -128,6 +130,13 @@ class MetadataAgent(GenericAgent):
                 self._logger.exception('Metadata repair failed')
                 self._republish_or_fail_action(method, action, 'metadata', e)
                 return
+
+        if self._sub_action_processed(action, 'replication'):
+            self._logger.error('Replication already processed...? Okay... Something weird has happened here')
+        else:
+            self.publish_message(action, exchange='replication')
+            self._logger.info('Publishing action %s to replication queue...' % action['pid'])
+
         self._ack_message(method)
 
     def _process_checksums(self, action):
@@ -273,8 +282,8 @@ class MetadataAgent(GenericAgent):
         # done. that would then trigger the API to place the completed-timestamp. for convenience right now though,
         # immediately place the replication-timestamp. once some processing will happen in replication for deletion,
         # move this to its correct place.
-        self._save_action_completion_timestamp(action, 'replication')
-
+        #self._save_action_completion_timestamp(action, 'replication')
+        self._save_action_completion_timestamp(action, 'completed')
         self._logger.info('Metadata deletion OK')
 
     def _process_checksums_repair(self, action, nodes):

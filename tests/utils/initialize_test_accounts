@@ -28,7 +28,9 @@
 # alredy exist, they will first be purged, such that every time this script is
 # run, the same baseline configuration for these accounts will exist.
 #
-# The following project and user configuration will be created:
+# An optional account configuration can be specified as an initial parameter.
+#
+# The following default project and user configuration will be created:
 #
 #               test_project_a  test_project_b  test_project_c  test_project_d
 # test_user_a         X
@@ -64,10 +66,30 @@ fi
 
 #--------------------------------------------------------------------------------
 
-PROJECTS="test_project_a test_project_b test_project_c test_project_d"
-USERS="test_user_a test_user_b test_user_c test_user_d test_user_x"
-BASIC_RELATIONS="test_user_a:test_project_a test_user_b:test_project_b test_user_c:test_project_c test_user_d:test_project_d test_user_x:test_project_a"
-EXTRA_RELATIONS="test_user_x:test_project_b test_user_x:test_project_c test_user_x:test_project_d"
+CONFIG=""
+
+if [ "$1" = "flush" ]; then
+    if [ "$2" != "" ]; then
+        CONFIG="$2"
+    fi
+else
+    if [ "$1" != "" ]; then
+        CONFIG="$1"
+    fi
+fi
+
+if [ "$CONFIG" != "" ]; then
+    if [ -s "$CONFIG" ]; then
+        . "$CONFIG"
+    else
+        errorExit "Error: The specified configuration file does not exist or is empty. Aborting"
+    fi
+else
+    PROJECTS="test_project_a test_project_b test_project_c test_project_d"
+    USERS="test_user_a test_user_b test_user_c test_user_d test_user_x"
+    BASIC_RELATIONS="test_user_a:test_project_a test_user_b:test_project_b test_user_c:test_project_c test_user_d:test_project_d test_user_x:test_project_a"
+    EXTRA_RELATIONS="test_user_x:test_project_b test_user_x:test_project_c test_user_x:test_project_d"
+fi
 
 #--------------------------------------------------------------------------------
 
@@ -236,4 +258,3 @@ for RELATION in $EXTRA_RELATIONS; do
         success
     fi
 done
-
