@@ -37,7 +37,7 @@ production = {
     "server_configuration_path": "config/config.sh",
     "service_constants_path": "lib/constants.sh",
 
-    "log_level": "DEBUG", # python logger log level names are valid values
+    "log_level": "INFO", # python logger log level names are valid values
 
     # when continuously consuming queues, sleep how many seconds between messages
     #"main_loop_delay": 10,
