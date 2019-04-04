@@ -105,18 +105,35 @@ function success {
 
 #--------------------------------------------------------------------------------
 
-echo "Flushing all action and frozen node records from database..."
+echo "Flushing all action and file records from IDA service database..."
 
 for PROJECT in $PROJECTS; do
     STEP="   Flushing $PROJECT"
     printf "%${PADDING}s" "$STEP"
     $CURL_POST $NC_ADMIN_USER:$NC_ADMIN_PASS "$URL_BASE_IDA/api/flush?project=$PROJECT" 2>&1 >/dev/null
     if [ "$?" -ne 0 ]; then
-        failure "Failed to flush records for $PROJECT. (ignored)."
+        failure "Failed to flush IDA records for $PROJECT. (ignored)."
     else
         success
     fi
 done
+
+if [ "$METAX_AVAILABLE" = "1" ]; then
+
+    echo "Flushing all frozen file records from METAX database..."
+
+    for PROJECT in $PROJECTS; do
+        STEP="   Flushing $PROJECT"
+        printf "%${PADDING}s" "$STEP"
+        $CURL_POST $METAX_API_USER:$METAX_API_PASS "$METAX_API_ROOT_URL/files/flush_project?project=$PROJECT" 2>&1 >/dev/null
+        if [ "$?" -ne 0 ]; then
+            failure "Failed to flush METAX records for $PROJECT. (ignored)."
+        else
+            success
+        fi
+    done
+
+fi
 
 #--------------------------------------------------------------------------------
 
