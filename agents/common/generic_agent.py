@@ -44,8 +44,8 @@ class GenericAgent():
 
     def __init__(self):
         self._channel = None
-        self._settings = get_settings()
         self._uida_conf_vars = load_variables_from_uida_conf_files()
+        self._settings = get_settings(self._uida_conf_vars)
         self._ida_api_url = self._uida_conf_vars['IDA_API_ROOT_URL']
 
         self._hostname = socket.gethostname()
@@ -69,7 +69,7 @@ class GenericAgent():
         self.last_failed_action = {}
         self.last_updated_action = {}
 
-        self._logger = get_logger(self.name)
+        self._logger = get_logger(self.name, self._uida_conf_vars)
         self.connect()
         self._cleanup_old_sentinel_monitoring_files()
 
@@ -275,8 +275,8 @@ class GenericAgent():
 
         if queue_state.method.message_count > 0:
             self._logger.debug('%d messages in queue %s.' % (queue_state.method.message_count, queue))
-        else:
-            self._logger.debug('Queue %s is empty.' % queue)
+        #else:
+            #self._logger.debug('Queue %s is empty.' % queue)
 
         return queue_state.method.message_count
 

@@ -147,9 +147,20 @@ class ReplicationAgent(GenericAgent):
 
         As an extra precaution, checksums are re-calculated for files after copy,
         and compared with the checksums of the initial checksum generation phase.
+
+        If running in a test environment, or if the action is a repair action, the
+        file will not be re-copied if it already exists and the file size is the
+        same for both the frozen file and already replicated file.
         """
         src_path = construct_file_path(self._uida_conf_vars, node)
         dest_path = construct_file_path(self._uida_conf_vars, node, replication=True)
+
+        # TODO include repair action check
+        if self._uida_conf_vars.get('IDA_ENVIRONMENT', False) == 'TEST':
+            if os.path.exists(dest_path):
+                if os.stat(src_path).st_size == os.stat(dest_path).st_size:
+                    self._logger.debug('Skipping already replicated file: %s' % dest_path)
+                    return
 
         try:
             shutil.copy(src_path, dest_path)

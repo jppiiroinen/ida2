@@ -40,8 +40,7 @@ production = {
     "log_level": "INFO", # python logger log level names are valid values
 
     # when continuously consuming queues, sleep how many seconds between messages
-    #"main_loop_delay": 10,
-    "main_loop_delay": 0.1,
+    "main_loop_delay": 10,
 
     # retry policies for various actions made by the agents during rabbitmq
     # message processing.
@@ -58,22 +57,16 @@ production = {
         # exceeding max_retries will result in the action being marked as failed, and
         # the agents will make no more autonomous attempts to complete the action.
         "checksums": {
-            #"max_retries": 3,
-            #"retry_interval": 10, # seconds
-            "max_retries": 10,
-            "retry_interval": 1, # seconds
+            "max_retries": 3,
+            "retry_interval": 10, # seconds
         },
         "metadata": {
-            #"max_retries": 3,
-            #"retry_interval": 10,
-            "max_retries": 10,
-            "retry_interval": 1,
+            "max_retries": 3,
+            "retry_interval": 10,
         },
         "replication": {
-            #"max_retries": 3,
-            #"retry_interval": 10,
-            "max_retries": 10,
-            "retry_interval": 1,
+            "max_retries": 3,
+            "retry_interval": 10,
         },
 
         # general http requests sent to http services. a simple loop for retry,
@@ -84,11 +77,6 @@ production = {
         "http_request": {
             "max_retries": 10,
             "retry_intervals": [
-                1,
-                1,
-                1,
-                1,
-                1,
                 3,
                 10,
                 60,
@@ -106,6 +94,57 @@ production = {
         "rabbitmq_errors": {
             "max_retries": 10,
             "retry_intervals": [
+                3,
+                10,
+                60,
+            ],
+        }
+    },
+}
+
+"""
+Development settings are used whenever the application is executed in a test environment
+as specified via the IDA_ENVIRONMENT variable and thus usually corresponding to a
+development environment (but distinct from a automated test environment, as defined
+separately below)
+"""
+development = {
+    "server_configuration_path": "config/config.sh",
+    "service_constants_path": "lib/constants.sh",
+
+    "log_level": "DEBUG", # python logger log level names are valid values
+
+    "main_loop_delay": 0.1,
+
+    "retry_policy": {
+        "checksums": {
+            "max_retries": 10,
+            "retry_interval": 1, # seconds
+        },
+        "metadata": {
+            "max_retries": 10,
+            "retry_interval": 1,
+        },
+        "replication": {
+            "max_retries": 10,
+            "retry_interval": 1,
+        },
+        "http_request": {
+            "max_retries": 10,
+            "retry_intervals": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                3,
+                10,
+                60,
+            ],
+        },
+        "rabbitmq_errors": {
+            "max_retries": 10,
+            "retry_intervals": [
                 1,
                 1,
                 1,
@@ -120,8 +159,8 @@ production = {
 }
 
 """
-Test settings are used when executing automated tests. In practice, the distinction
-between production and test mode is whether or not the module 'unittest' is
+Unit test settings are used when executing automated unit tests. In practice, the
+distinction between production and test mode is whether or not the module 'unittest' is
 loaded in sys.modules
 """
 test = {
