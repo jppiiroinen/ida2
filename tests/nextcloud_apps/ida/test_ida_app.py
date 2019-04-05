@@ -49,8 +49,8 @@ class TestIdaApp(unittest.TestCase):
         # keep track of success, for reference in tearDown
         self.success = False
 
-        # timeout when waiting for actions to complete (5 minutes)
-        self.timeout = 1300
+        # timeout when waiting for actions to complete
+        self.timeout = 3600
 
         print("(initializing)")
 
@@ -97,20 +97,16 @@ class TestIdaApp(unittest.TestCase):
 
     def test_ida_app(self):
 
-        # Note: the project names, user account names, and password for all PSO and user accounts
-        # of test projects is hard coded in the initialization script, and the password for PSO
-        # and user accounts is always "test".
-
         admin_user = (self.config["NC_ADMIN_USER"], self.config["NC_ADMIN_PASS"])
-        pso_user_a = (self.config["PROJECT_USER_PREFIX"] + "test_project_a", "test")
-        pso_user_b = (self.config["PROJECT_USER_PREFIX"] + "test_project_b", "test")
-        pso_user_c = (self.config["PROJECT_USER_PREFIX"] + "test_project_c", "test")
-        pso_user_d = (self.config["PROJECT_USER_PREFIX"] + "test_project_d", "test")
-        test_user_a = ("test_user_a", "test")
-        test_user_b = ("test_user_b", "test")
-        test_user_c = ("test_user_c", "test")
-        test_user_d = ("test_user_d", "test")
-        test_user_x = ("test_user_x", "test")
+        pso_user_a = (self.config["PROJECT_USER_PREFIX"] + "test_project_a", self.config["PROJECT_USER_PASS"])
+        pso_user_b = (self.config["PROJECT_USER_PREFIX"] + "test_project_b", self.config["PROJECT_USER_PASS"])
+        pso_user_c = (self.config["PROJECT_USER_PREFIX"] + "test_project_c", self.config["PROJECT_USER_PASS"])
+        pso_user_d = (self.config["PROJECT_USER_PREFIX"] + "test_project_d", self.config["PROJECT_USER_PASS"])
+        test_user_a = ("test_user_a", self.config["TEST_USER_PASS"])
+        test_user_b = ("test_user_b", self.config["TEST_USER_PASS"])
+        test_user_c = ("test_user_c", self.config["TEST_USER_PASS"])
+        test_user_d = ("test_user_d", self.config["TEST_USER_PASS"])
+        test_user_x = ("test_user_x", self.config["TEST_USER_PASS"])
 
         frozen_area_root = "%s/PSO_test_project_a/files/test_project_a" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_a/files/test_project_a%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
@@ -1146,10 +1142,6 @@ class TestIdaApp(unittest.TestCase):
         print("--- Repair Actions")
 
         # TODO add checks for postprocessing results once repair handling is added to postprocessing agents
-
-        admin_user = (self.config["NC_ADMIN_USER"], self.config["NC_ADMIN_PASS"])
-        pso_user_d = (self.config["PROJECT_USER_PREFIX"] + "test_project_d", "test")
-        test_user_d = ("test_user_d", "test")
 
         print("Freeze a folder")
         data = {"project": "test_project_d", "pathname": "/2017-08/Experiment_1"}
