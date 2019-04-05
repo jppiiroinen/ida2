@@ -137,8 +137,6 @@ fi
 
 #--------------------------------------------------------------------------------
 
-#export OC_PASS="$TEST_USER_PASS"
-
 echo "Cleaning up any existing test projects..."
 echo "Deleting any existing test users..."
 

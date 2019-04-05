@@ -62,6 +62,7 @@ RABBIT_MONITOR_PASS="test"
 RABBIT_HEARTBEAT=0 # seconds. 0 == disabled
 RABBIT_MONITORING_DIR="/mnt/rabbitmq_monitoring"
 
+SIMULATE_AGENTS=0 # If 1, automated testing skips all agent behavioral tests (should match equivalent setting in config.php)
 METAX_AVAILABLE=1 # If 0, the metadata publication agent will not try to store metadata to METAX
 METAX_FILE_STORAGE_ID="urn:nbn:fi:att:file-storage-ida"
 METAX_API_ROOT_URL="https://localhost/rest/v1"
@@ -79,4 +80,3 @@ TRASH_DATA_ROOT="/mnt/storage_vol02/ida_trash"
 
 EMAIL_SENDER="root@localhost"
 EMAIL_RECIPIENTS="root@localhost"
-

@@ -77,6 +77,7 @@ class TestAgents(unittest.TestCase):
 
     def waitForPendingActions(self, project, user):
         print("(waiting for pending actions to fully complete)")
+        print(".", end='', flush=True)
         response = requests.get("%s/actions?project=%s&status=pending" % (self.config["IDA_API_ROOT_URL"], project), auth=user, verify=False)
         self.assertEqual(response.status_code, 200)
         actions = response.json()
