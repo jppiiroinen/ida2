@@ -143,13 +143,11 @@ else
 
     if [ "$SIMULATE_AGENTS" = "1" ]; then
 
-        echo <<EOF
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!! AGENT BEHAVIORAL TESTS SKIPPED !!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-EOF
+        echo ""
+        echo "**************************************"
+        echo "*** AGENT BEHAVIORAL TESTS SKIPPED ***"
+        echo "**************************************"
+        echo ""
 
     else
 
