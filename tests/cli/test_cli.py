@@ -73,6 +73,9 @@ class TestIdaCli(unittest.TestCase):
         path = Path(self.cli)
         self.assertTrue(path.is_file())
 
+        # Prefix IDA CLI script pathname with test user password from configuration
+        self.cli = "IDA_PASSWORD=\"%s\" %s" % (self.config['TEST_USER_PASS'], self.cli)
+
         # Ensure test data root exists where specified and is directory
         path = Path(self.testdata)
         self.assertTrue(path.is_dir())
