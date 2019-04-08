@@ -73,6 +73,12 @@ class TestAgents(unittest.TestCase):
             print("(cleaning)")
             cmd = "sudo -u %s %s/tests/utils/initialize_test_accounts flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
             os.system(cmd)
+            if [ self.config["METAX_AVAILABLE"] == 0 ]:
+                print('')
+                print("**************************************")
+                print("*** METAX INTEGRATION NOT TESTED!! ***")
+                print("**************************************")
+                print('')
 
 
     def waitForPendingActions(self, project, user):
@@ -101,11 +107,16 @@ class TestAgents(unittest.TestCase):
         frozen_area_root = "%s/PSO_test_project_a/files/test_project_a" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_a/files/test_project_a%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
 
+        # Override simulation of agents, if defined in configuration. Tests will fail if agents are not running.
+        headers = { 'X-SIMULATE-AGENTS': 'false' }
+
+        # TODO Check for running agents
+
         print("--- Freeze Action Postprocessing")
 
         print("Freeze a folder")
         data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1"}
-        response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
+        response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], headers=headers, json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         action_data = response.json()
         action_pid = action_data["pid"]
@@ -149,7 +160,7 @@ class TestAgents(unittest.TestCase):
 
         print("Unfreeze single frozen file")
         data["pathname"] = "/2017-08/Experiment_1/test01.dat"
-        response = requests.post("%s/unfreeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
+        response = requests.post("%s/unfreeze" % self.config["IDA_API_ROOT_URL"], headers=headers, json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         action_data = response.json()
         action_pid = action_data["pid"]
@@ -189,7 +200,7 @@ class TestAgents(unittest.TestCase):
 
         print("Delete single frozen file")
         data["pathname"] = "/2017-08/Experiment_1/test02.dat"
-        response = requests.post("%s/delete" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_a, verify=False)
+        response = requests.post("%s/delete" % self.config["IDA_API_ROOT_URL"], headers=headers, json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         action_data = response.json()
         action_pid = action_data["pid"]

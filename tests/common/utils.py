@@ -87,7 +87,6 @@ def load_configuration():
         'RABBIT_WORKER_USER':     server_configuration.RABBIT_WORKER_USER,
         'RABBIT_WORKER_PASS':     server_configuration.RABBIT_WORKER_PASS,
         'RABBIT_WORKER_LOG_FILE': server_configuration.RABBIT_WORKER_LOG_FILE,
-        'SIMULATE_AGENTS':        server_configuration.SIMULATE_AGENTS,
         'METAX_AVAILABLE':        server_configuration.METAX_AVAILABLE,
         'METAX_API_ROOT_URL':     server_configuration.METAX_API_ROOT_URL,
         'METAX_API_USER':         server_configuration.METAX_API_USER,

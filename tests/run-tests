@@ -141,21 +141,17 @@ else
         exit 1
     fi
 
-    if [ "$SIMULATE_AGENTS" = "1" ]; then
+    /srv/venv-agents/bin/python -W ignore -m unittest discover -f -q tests.agents
 
-        echo ""
-        echo "**************************************"
-        echo "*** AGENT BEHAVIORAL TESTS SKIPPED ***"
-        echo "**************************************"
-        echo ""
-
-    else
-
-        /srv/venv-agents/bin/python -W ignore -m unittest discover -f -q tests.agents
-
-        if [ $? -ne 0 ]; then
-            exit 1
-        fi
-
+    if [ $? -ne 0 ]; then
+        exit 1
     fi
+
+
+    echo ""
+    echo "======================================"
+    echo "=== ALL EXECUTED TESTS SUCCESSFUL  ==="
+    echo "======================================"
+    echo ""
+
 fi
