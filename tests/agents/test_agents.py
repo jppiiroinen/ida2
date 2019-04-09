@@ -275,7 +275,10 @@ class TestAgents(unittest.TestCase):
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-#       print("Physically delete replication of file 3")
+        print("Physically delete replication of file 3")
+        pathname = "%s/projects/test_project_a/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
+        result = os.remove(pathname)
+        self.assertFalse(os.path.exists(pathname))
 
         print("Repair project")
         response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), auth=pso_user_a, verify=False)
@@ -301,27 +304,38 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(file_1_data['frozen'], file_data['frozen'])
         self.assertEqual(file_1_data['replicated'], file_data['replicated'])
 
-        # checksums:
-#       print("Retrieve file details from post-repair frozen file 2")
-#       print("Verify file size is defined and matches file size on disk")
-#       print("Verify checksum is defined and matches expected value")
-#       print("Retrieve file details from post-repair frozen file 3")
-#       print("Verify file size is defined and matches file size on disk")
-#       print("Verify checksum is defined and matches expected value")
-#       print("Retrieve file details from post-repair file manually moved to frozen space")
-#       print("Verify file size is defined and matches file size on disk")
-#       print("Verify checksum is defined and matches expected value")
-#       print("Verify timestamps")
+        print("Retrieve file details from post-repair frozen file 2")
+        data["pathname"] = "/2017-08/Experiment_1/baseline/test02.dat"
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_data = response.json()
+        self.assertEqual(file_data["size"], 1531)
+        self.assertEqual(file_data["checksum"], "c5a8e40a8afaebf3d8429266a6f54ef52eff14dcd22cb64a59a06e4d724eebb9")
+        self.assertEqual(file_2_data['replicated'], file_data['replicated'])
+
+        print("Retrieve file details from post-repair frozen file 3")
+        data["pathname"] = "/2017-08/Experiment_1/baseline/test03.dat"
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_data = response.json()
+        self.assertEqual(file_data["size"], 2263)
+        self.assertEqual(file_data["checksum"], "8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168")
+        pathname = "%s/projects/test_project_a/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
+        self.assertTrue(os.path.exists(pathname))
+        self.assertNotEqual(file_3_data['replicated'], file_data['replicated'])
+
+        print("Retrieve file details from post-repair file manually moved to frozen space")
+        data["pathname"] = "/2017-08/Experiment_2/baseline/test01.dat"
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_data = response.json()
+        self.assertEqual(file_data["size"], 446)
+        self.assertEqual(file_data["checksum"], "56293a80e0394d252e995f2debccea8223e4b5b2b150bee212729b3b39ac4d46")
+        pathname = "%s/projects/test_project_a/2017-08/Experiment_2/baseline/test01.dat" % (self.config["DATA_REPLICATION_ROOT"])
+        self.assertTrue(os.path.exists(pathname))
 
         # publication:
-        # If metax available, check only and all files associated with repair action in metax
-
-        # replication:
-#       print("Verify that file 1 was not replicated (replicated timestamp unchanged)")
-#       print("Verify that file 2 was not replicated (replicated timestamp unchanged)")
-#       print("Verify that file 3 was replicated (replicated timestamp different and replicated file exists)")
-        # ...
-        #
+        # If metax available, check only and all files associated with repair action are accesible in metax
 
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done
