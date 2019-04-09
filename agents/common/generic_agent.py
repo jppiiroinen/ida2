@@ -335,19 +335,30 @@ class GenericAgent():
             raise Exception('Action %s has no nodes associated with it' % action['pid'])
         return nodes if isinstance(nodes, list) else [nodes]
 
-    def _save_nodes_to_db(self, nodes, fields=[]):
+    def _save_nodes_to_db(self, nodes, fields=[], updated_only=False):
         assert len(fields), 'need to specify fields to update for node.'
 
         self._logger.debug('Saving node fields %s to ida db...' % str(fields))
 
         for node in nodes:
-            data = {}
-            for field in fields:
-                data[field] = node[field]
-            response = self._ida_api_request('post', '/files/%s' % node['pid'], data=data)
-            if response.status_code not in (200, 201, 204):
-                error_msg = 'IDA API returned an error when trying to update node pid %s. Error message from API: %s'
-                raise Exception(error_msg % (node['pid'], str(response.content)))
+
+            update_node = True
+
+            if updated_only:
+                # Only update nodes which are flagged as having been updated
+                try:
+                    update_node = node['_updated']
+                except:
+                    update_node = False
+
+            if update_node:
+                data = {}
+                for field in fields:
+                    data[field] = node[field]
+                response = self._ida_api_request('post', '/files/%s' % node['pid'], data=data)
+                if response.status_code not in (200, 201, 204):
+                    error_msg = 'IDA API returned an error when trying to update node pid %s. Error message from API: %s'
+                    raise Exception(error_msg % (node['pid'], str(response.content)))
 
     def _sub_action_processed(self, action, sub_action_name):
         """

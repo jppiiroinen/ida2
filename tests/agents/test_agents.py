@@ -64,6 +64,9 @@ class TestAgents(unittest.TestCase):
         result = os.system(cmd)
         self.assertEquals(result, 0)
 
+        # print("Verify agents are running")
+        # TODO Check for running agents
+
 
     def tearDown(self):
         # flush all test projects, user accounts, and data, but only if all tests passed,
@@ -107,10 +110,8 @@ class TestAgents(unittest.TestCase):
         frozen_area_root = "%s/PSO_test_project_a/files/test_project_a" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_a/files/test_project_a%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
 
-        # Override simulation of agents, if defined in configuration. Tests will fail if agents are not running.
+        # Override (disable) simulation of agents, no matter what might be defined in configuration
         headers = { 'X-SIMULATE-AGENTS': 'false' }
-
-        # TODO Check for running agents
 
         print("--- Freeze Action Postprocessing")
 
@@ -151,8 +152,8 @@ class TestAgents(unittest.TestCase):
         self.assertIsNone(file_data.get("cleared", None))
         file_pid = file_data["pid"]
 
-        # TODO if metax is available, verify metadata in metax
-        # TODO verify physical file replication
+        # TODO if metax is available, verify frozen file is accessible in metax
+        # TODO verify that frozen file is replicated
 
         # --------------------------------------------------------------------------------
 
@@ -192,7 +193,7 @@ class TestAgents(unittest.TestCase):
         self.assertIsNone(file_data.get("cleared", None))
         file_pid = file_data["pid"]
 
-        # TODO if metax is available, verify metadata inactive in metax
+        # TODO if metax is available, verify unfrozen file is marked as removed in metax
 
         # --------------------------------------------------------------------------------
 
@@ -230,7 +231,55 @@ class TestAgents(unittest.TestCase):
         self.assertIsNone(action_data.get("cleared", None))
         file_pid = file_data["pid"]
 
-        # TODO if metax is available, verify metadata inactive in metax
+        # TODO if metax is available, verify deleted file is marked as removed in metax
+
+        # --------------------------------------------------------------------------------
+
+        print("--- Repair Action Postprocessing")
+
+        # TODO
+        #
+        # setup:
+        # Retrieve file details from already frozen file 1
+        # Retrieve file details from already frozen file 2
+        # Update frozen file 2 record to set size to null
+        # Update frozen file 2 record to set checksum to null
+        # Retrieve file details from already frozen file 3
+        # Update frozen file 2 record to set size to 999
+        # Update frozen file 2 record to set checksum to 'abcdef'
+        # Physically move folder from staging to frozen area, run occ files:scan
+        # Physically delete replication of file 3
+        #
+        # general:
+        # Repair project
+        # Verify repair successful
+        # Wait for action to complete
+        # Get file details for files associated with repair action
+        # Ensure number of files the correct count
+        # Retrieve file details from post-repair frozen file 1
+        # Ensure previously frozen file 1 metadata has not changed (PID, size, checksum, timestamps, etc.)
+        #
+        # checksums:
+        # Retrieve file details from post-repair frozen file 2
+        # Verify file size is defined and matches file size on disk
+        # Verify checksum is defined and matches expected value
+        # Retrieve file details from post-repair frozen file 3
+        # Verify file size is defined and matches file size on disk
+        # Verify checksum is defined and matches expected value
+        # Retrieve file details from post-repair file manually moved to frozen space
+        # Verify file size is defined and matches file size on disk
+        # Verify checksum is defined and matches expected value
+        # Verify timestamps
+        #
+        # publication:
+        # If metax available, check only and all files associated with repair action in metax
+        #
+        # replication:
+        # Verify that file 1 was not replicated (replicated timestamp unchanged)
+        # Verify that file 2 was not replicated (replicated timestamp unchanged)
+        # Verify that file 3 was replicated (replicated timestamp different and replicated file exists)
+        # ...
+        #
 
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done

@@ -104,9 +104,14 @@ class MetadataAgent(GenericAgent):
 
     def _handle_repair_action(self, action, method):
 
-        # nodes downloaded during checksums processing can probably be
-        # re-used for metadata repair in this method.
+        # nodes obtained during checksums processing
         nodes = None
+
+        # Repair checksums (and file sizes) as required
+        #
+        # Note: the default behavior of the checksum processing accommodates both normal freeze
+        # actions and repair actions, so all that is needed here is to process the checksums for
+        # all nodes associated with the action, and is no different than for a repair action
 
         if self._sub_action_processed(action, 'checksums'):
             self._logger.info('Checksums already processed')
@@ -117,6 +122,8 @@ class MetadataAgent(GenericAgent):
                 self._logger.exception('Checksum processing failed')
                 self._republish_or_fail_action(method, action, 'checksums', e)
                 return
+
+        # Repair published metadata as required
 
         if self._complete_actions_without_metax():
             self._logger.info('Note: Completing action without Metax')
@@ -130,6 +137,8 @@ class MetadataAgent(GenericAgent):
                 self._logger.exception('Metadata repair failed')
                 self._republish_or_fail_action(method, action, 'metadata', e)
                 return
+
+        # Publish action message to replication queue
 
         if self._sub_action_processed(action, 'replication'):
             self._logger.error('Replication already processed...? Okay... Something weird has happened here')
@@ -149,10 +158,63 @@ class MetadataAgent(GenericAgent):
         for node in nodes:
             if self._graceful_shutdown_started:
                 raise SystemExit
-            file_path = construct_file_path(self._uida_conf_vars, node)
-            node['checksum'] = self._get_file_checksum(file_path)
 
-        self._save_nodes_to_db(nodes, fields=['checksum'])
+            # Generate local filesystem pathname to file in frozen area
+            file_path = construct_file_path(self._uida_conf_vars, node)
+
+            # If the file size reported for the file differs from the file size on disk,
+            # or if no file size is recorded in IDA for the file, or if no checksum is
+            # recorded in IDA for the file, then the file size should be updated in IDA
+            # based on the file size on disk, and a new checksum generated based on the
+            # current file on disk, and the new checksum recorded in IDA.
+            #
+            # The following logic works efficiently both for freeze and repair actions.
+
+            # Assume no updates to either file size or checksum required
+            node_updated = False
+
+            # Get reported file size, if defined
+            try:
+                node_size = node['size']
+            except:
+                node_size = None
+
+            # Get reported checksum, if defined
+            try:
+                node_checksum = node['checksum']
+            except:
+                node_checksum = None
+
+            # If no file size is reported, or we have a repair action, get the actual size on disk
+            # Else trust the reported size and avoid the cost of retrieving the size on disk
+            if node_size == None or action['action'] == 'repair':
+                file_size = os.path.getsize(file_path)
+            else:
+                file_size = node_size
+
+            # If the reported file size disagrees with the determined file size, record file size
+            # on disk and generate and record new checksum
+            if node_size != file_size:
+                self._logger.debug('Recording both size and checksum for file %s' % node['pid'])
+                node_size = file_size
+                node_checksum = self._get_file_checksum(file_path)
+                node_updated = True
+
+            # If still no checksum, generate and record new checksum
+            if node_checksum == None:
+                self._logger.debug('Recording checksum for file %s' % node['pid'])
+                node_checksum = self._get_file_checksum(file_path)
+                node_updated = True
+
+            # If either new file size or new checksum, update node values and flag node as updated
+            if node_updated:
+                node['size'] = node_size
+                node['checksum'] = node_checksum
+                node['_updated'] = node_updated
+
+        # Update db records for all updated nodes
+        self._save_nodes_to_db(nodes, fields=['checksum', 'size'], updated_only=True)
+
         self._save_action_completion_timestamp(action, 'checksums')
         self._logger.info('Checksums processing OK')
         return nodes
