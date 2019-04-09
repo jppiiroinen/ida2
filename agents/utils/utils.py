@@ -123,6 +123,8 @@ def load_variables_from_uida_conf_files():
     )
 
     uida_conf_vars = {
+        'ROOT': server_conf.ROOT,
+        'OCC': server_conf.OCC,
         'IDA_ENVIRONMENT': server_conf.IDA_ENVIRONMENT,
         'IDA_API_ROOT_URL': server_conf.IDA_API_ROOT_URL,
         'METAX_API_ROOT_URL': server_conf.METAX_API_ROOT_URL,

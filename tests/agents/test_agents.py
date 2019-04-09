@@ -34,6 +34,7 @@ import subprocess
 import unittest
 import time
 import os
+import shutil
 from tests.common.utils import load_configuration
 
 
@@ -150,10 +151,10 @@ class TestAgents(unittest.TestCase):
         self.assertIsNotNone(file_data.get("frozen", None))
         self.assertIsNone(file_data.get("removed", None))
         self.assertIsNone(file_data.get("cleared", None))
+        self.assertTrue(os.path.exists("%s/projects/test_project_a/%s" % (self.config["DATA_REPLICATION_ROOT"], file_data['pathname'])))
         file_pid = file_data["pid"]
 
         # TODO if metax is available, verify frozen file is accessible in metax
-        # TODO verify that frozen file is replicated
 
         # --------------------------------------------------------------------------------
 
@@ -237,47 +238,88 @@ class TestAgents(unittest.TestCase):
 
         print("--- Repair Action Postprocessing")
 
-        # TODO
-        #
-        # setup:
-        # Retrieve file details from already frozen file 1
-        # Retrieve file details from already frozen file 2
-        # Update frozen file 2 record to set size to null
-        # Update frozen file 2 record to set checksum to null
-        # Retrieve file details from already frozen file 3
-        # Update frozen file 2 record to set size to 999
-        # Update frozen file 2 record to set checksum to 'abcdef'
-        # Physically move folder from staging to frozen area, run occ files:scan
-        # Physically delete replication of file 3
-        #
-        # general:
-        # Repair project
-        # Verify repair successful
-        # Wait for action to complete
-        # Get file details for files associated with repair action
-        # Ensure number of files the correct count
-        # Retrieve file details from post-repair frozen file 1
-        # Ensure previously frozen file 1 metadata has not changed (PID, size, checksum, timestamps, etc.)
-        #
+        print("Retrieve file details from already frozen file 1")
+        data["pathname"] = "/2017-08/Experiment_1/baseline/test01.dat"
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_1_data = response.json()
+
+        print("Retrieve file details from already frozen file 2")
+        data["pathname"] = "/2017-08/Experiment_1/baseline/test02.dat"
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_2_data = response.json()
+
+        print("Update frozen file 2 record to set size and checksum to null")
+        data = {"size": "null", "checksum": "null"}
+        response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_2_data["pid"]), json=data, auth=pso_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_2_data = response.json()
+
+        print("Retrieve file details from already frozen file 3")
+        data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/baseline/test03.dat"}
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_3_data = response.json()
+
+        print("Update frozen file 3 record to set size to 999 and checksum to 'abcdef'")
+        data = {"size": 999, "checksum": "abcdef"}
+        response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=pso_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_3_data = response.json()
+
+        print("Move folder from staging to frozen area")
+        result = shutil.move("%s/2017-08/Experiment_2" % (staging_area_root), "%s/2017-08/Experiment_2" % (frozen_area_root))
+        self.assertEqual(result, "%s/2017-08/Experiment_2" % (frozen_area_root))
+        cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config['HTTPD_USER'], self.config["ROOT"])
+        result = os.system(cmd)
+        self.assertEqual(result, 0)
+
+#       print("Physically delete replication of file 3")
+
+        print("Repair project")
+        response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), auth=pso_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        action_data = response.json()
+
+        self.waitForPendingActions("test_project_a", test_user_a)
+
+        response = requests.get("%s/files/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_set_data = response.json()
+        self.assertEqual(len(file_set_data), 20)
+
+        print("Verify file details from previously frozen file 1 are unchanged")
+        data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/baseline/test01.dat"}
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_data = response.json()
+        self.assertEqual(file_1_data['pid'], file_data['pid'])
+        self.assertEqual(file_1_data['pathname'], file_data['pathname'])
+        self.assertEqual(file_1_data['size'], file_data['size'])
+        self.assertEqual(file_1_data['checksum'], file_data['checksum'])
+        self.assertEqual(file_1_data['frozen'], file_data['frozen'])
+        self.assertEqual(file_1_data['replicated'], file_data['replicated'])
+
         # checksums:
-        # Retrieve file details from post-repair frozen file 2
-        # Verify file size is defined and matches file size on disk
-        # Verify checksum is defined and matches expected value
-        # Retrieve file details from post-repair frozen file 3
-        # Verify file size is defined and matches file size on disk
-        # Verify checksum is defined and matches expected value
-        # Retrieve file details from post-repair file manually moved to frozen space
-        # Verify file size is defined and matches file size on disk
-        # Verify checksum is defined and matches expected value
-        # Verify timestamps
-        #
+#       print("Retrieve file details from post-repair frozen file 2")
+#       print("Verify file size is defined and matches file size on disk")
+#       print("Verify checksum is defined and matches expected value")
+#       print("Retrieve file details from post-repair frozen file 3")
+#       print("Verify file size is defined and matches file size on disk")
+#       print("Verify checksum is defined and matches expected value")
+#       print("Retrieve file details from post-repair file manually moved to frozen space")
+#       print("Verify file size is defined and matches file size on disk")
+#       print("Verify checksum is defined and matches expected value")
+#       print("Verify timestamps")
+
         # publication:
         # If metax available, check only and all files associated with repair action in metax
-        #
+
         # replication:
-        # Verify that file 1 was not replicated (replicated timestamp unchanged)
-        # Verify that file 2 was not replicated (replicated timestamp unchanged)
-        # Verify that file 3 was replicated (replicated timestamp different and replicated file exists)
+#       print("Verify that file 1 was not replicated (replicated timestamp unchanged)")
+#       print("Verify that file 2 was not replicated (replicated timestamp unchanged)")
+#       print("Verify that file 3 was replicated (replicated timestamp different and replicated file exists)")
         # ...
         #
 

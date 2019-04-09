@@ -1,4 +1,4 @@
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 # This file is part of the IDA research data storage service
 #
 # Copyright (C) 2018 Ministry of Education and Culture, Finland
@@ -19,7 +19,7 @@
 # @author   CSC - IT Center for Science Ltd., Espoo Finland <servicedesk@csc.fi>
 # @license  GNU Affero General Public License, version 3
 # @link     https://research.csc.fi/
-#--------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
 
 import errno
 import os
@@ -60,18 +60,6 @@ class ReplicationAgent(GenericAgent):
                 self._republish_or_fail_action(method, action, 'replication', e)
                 return
         self._ack_message(method)
-
-#   def _handle_repair_action(self, action, method):
-#       if self._sub_action_processed(action, 'replication'):
-#           self._logger.info('Replication repair already processed')
-#       else:
-#           try:
-#               self._process_replication_repair(action)
-#           except Exception as e:
-#               self._logger.exception('Replication repair failed')
-#               self._republish_or_fail_action(method, action, 'replication', e)
-#               return
-#       self._ack_message(method)
 
     def _process_replication(self, action):
         """
@@ -139,7 +127,6 @@ class ReplicationAgent(GenericAgent):
 
         self._logger.info('Replication root at %s OK' % self._uida_conf_vars['DATA_REPLICATION_ROOT'])
 
-
     def _copy_to_replication_location(self, node, timestamp=current_time()):
         """
         Copy a single node from frozen location to replication location.
@@ -186,16 +173,6 @@ class ReplicationAgent(GenericAgent):
         node['replicated'] = timestamp
         node['_updated'] = True
         node['_copied'] = True
-
-
-#   def _process_replication_repair(self, action):
-#       # todo according to https://jira.eduuni.fi/browse/CSCIDA-283
-#       # no need to contact metax at all
-#       self._logger.info('Processing replication repair...')
-#       self._save_action_completion_timestamp(action, 'replication')
-#       self._save_action_completion_timestamp(action, 'completed')
-#       self._logger.info('Replication repair OK')
-
 
     def _republish_or_fail_action(self, method, action, sub_action_name, exception):
         """
