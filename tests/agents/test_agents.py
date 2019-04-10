@@ -102,11 +102,20 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(len(actions), 0, "Timed out waiting for pending actions to fully complete")
 
 
+    def checkForFailedActions(self, project, user):
+        print("(verifying no failed actions)")
+        response = requests.get("%s/actions?project=%s&status=failed" % (self.config["IDA_API_ROOT_URL"], project), auth=user, verify=False)
+        self.assertEqual(response.status_code, 200)
+        actions = response.json()
+        assert(len(actions) == 0)
+
+
     def test_agents(self):
 
         admin_user = (self.config["NC_ADMIN_USER"], self.config["NC_ADMIN_PASS"])
         pso_user_a = (self.config["PROJECT_USER_PREFIX"] + "test_project_a", self.config["PROJECT_USER_PASS"])
         test_user_a = ("test_user_a", self.config["TEST_USER_PASS"])
+        metax_user = (self.config["METAX_API_USER"], self.config["METAX_API_PASS"])
 
         frozen_area_root = "%s/PSO_test_project_a/files/test_project_a" % (self.config["STORAGE_OC_DATA_ROOT"])
         staging_area_root = "%s/PSO_test_project_a/files/test_project_a%s" % (self.config["STORAGE_OC_DATA_ROOT"], self.config["STAGING_FOLDER_SUFFIX"])
@@ -154,9 +163,20 @@ class TestAgents(unittest.TestCase):
         self.assertTrue(os.path.exists("%s/projects/test_project_a/%s" % (self.config["DATA_REPLICATION_ROOT"], file_data['pathname'])))
         file_pid = file_data["pid"]
 
-        # TODO if metax is available, verify frozen file is accessible in metax
         if self.config["METAX_AVAILABLE"] == 1:
-            None
+            print("Verify frozen file details accessible from METAX")
+            response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_pid), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 200)
+            metax_file_data = response.json()
+            self.assertEqual(file_data["pid"], metax_file_data["identifier"])
+            self.assertEqual(file_data["project"], metax_file_data["project_identifier"])
+            self.assertEqual(file_data["pathname"], metax_file_data["file_path"])
+            self.assertEqual(file_data["checksum"], metax_file_data["checksum"]["value"])
+            self.assertEqual(file_data["size"], metax_file_data["byte_size"])
+            self.assertIsNotNone(metax_file_data.get("file_frozen", None))
+            self.assertIsNotNone(metax_file_data.get("file_modified", None))
+            self.assertEqual(metax_file_data["service_created"], "ida")
+            self.assertFalse(metax_file_data["removed"])
 
         # --------------------------------------------------------------------------------
 
@@ -196,7 +216,10 @@ class TestAgents(unittest.TestCase):
         self.assertIsNone(file_data.get("cleared", None))
         file_pid = file_data["pid"]
 
-        # TODO if metax is available, verify unfrozen file is marked as removed in metax
+        if self.config["METAX_AVAILABLE"] == 1:
+            print("Verify unfrozen file marked as removed in METAX")
+            response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_pid), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 404)
 
         # --------------------------------------------------------------------------------
 
@@ -234,7 +257,10 @@ class TestAgents(unittest.TestCase):
         self.assertIsNone(action_data.get("cleared", None))
         file_pid = file_data["pid"]
 
-        # TODO if metax is available, verify deleted file is marked as removed in metax
+        if self.config["METAX_AVAILABLE"] == 1:
+            print("Verify deleted file marked as removed in METAX")
+            response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_pid), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 404)
 
         # --------------------------------------------------------------------------------
 
@@ -270,17 +296,24 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         file_3_data = response.json()
 
-        print("Move folder from staging to frozen area")
-        result = shutil.move("%s/2017-08/Experiment_2" % (staging_area_root), "%s/2017-08/Experiment_2" % (frozen_area_root))
-        self.assertEqual(result, "%s/2017-08/Experiment_2" % (frozen_area_root))
-        cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config['HTTPD_USER'], self.config["ROOT"])
-        result = os.system(cmd)
-        self.assertEqual(result, 0)
-
         print("Physically delete replication of file 3")
         pathname = "%s/projects/test_project_a/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
         result = os.remove(pathname)
         self.assertFalse(os.path.exists(pathname))
+
+        print("Move folder from staging to frozen area")
+        result = shutil.move("%s/2017-08/Experiment_2" % (staging_area_root), "%s/2017-08/Experiment_2" % (frozen_area_root))
+        self.assertEqual(result, "%s/2017-08/Experiment_2" % (frozen_area_root))
+
+        print("Physically delete previously frozen file from frozen area")
+        pathname = "%s/2017-08/Experiment_1/test04.dat" % (frozen_area_root)
+        result = os.remove(pathname)
+        self.assertFalse(os.path.exists(pathname))
+
+        print("Update Nextcloud file database")
+        cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config['HTTPD_USER'], self.config["ROOT"])
+        result = os.system(cmd)
+        self.assertEqual(result, 0)
 
         print("Repair project")
         response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), headers=headers, auth=pso_user_a, verify=False)
@@ -288,11 +321,12 @@ class TestAgents(unittest.TestCase):
         action_data = response.json()
 
         self.waitForPendingActions("test_project_a", test_user_a)
+        self.checkForFailedActions("test_project_a", test_user_a)
 
         response = requests.get("%s/files/action/%s" % (self.config["IDA_API_ROOT_URL"], action_data["pid"]), auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_set_data = response.json()
-        self.assertEqual(len(file_set_data), 20)
+        self.assertEqual(len(file_set_data), 19)
 
         print("Verify file details from previously frozen file 1 are unchanged")
         data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/baseline/test01.dat"}
@@ -306,7 +340,7 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(file_1_data['frozen'], file_data['frozen'])
         self.assertEqual(file_1_data['replicated'], file_data['replicated'])
 
-        print("Retrieve file details from post-repair frozen file 2")
+        print("Verify file details from post-repair frozen file 2 are repaired")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test02.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -315,7 +349,7 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(file_data["checksum"], "c5a8e40a8afaebf3d8429266a6f54ef52eff14dcd22cb64a59a06e4d724eebb9")
         self.assertEqual(file_2_data['replicated'], file_data['replicated'])
 
-        print("Retrieve file details from post-repair frozen file 3")
+        print("Verify file details from post-repair frozen file 3 are repaired")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test03.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -326,7 +360,7 @@ class TestAgents(unittest.TestCase):
         self.assertTrue(os.path.exists(pathname))
         self.assertNotEqual(file_3_data['replicated'], file_data['replicated'])
 
-        print("Retrieve file details from post-repair file manually moved to frozen space")
+        print("Verify file details from post-repair file manually moved to frozen space are defined")
         data["pathname"] = "/2017-08/Experiment_2/baseline/test01.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -336,7 +370,20 @@ class TestAgents(unittest.TestCase):
         pathname = "%s/projects/test_project_a/2017-08/Experiment_2/baseline/test01.dat" % (self.config["DATA_REPLICATION_ROOT"])
         self.assertTrue(os.path.exists(pathname))
 
+        print("Attempt to retrieve file details from post-repair file manually removed from frozen space")
+        data["pathname"] = "/2017-08/Experiment_1/test04.dat"
+        response = requests.get("%s/files/byProjectPathname/%s?includeInactive=true" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_data = response.json()
+        self.assertIsNotNone(file_data.get("cleared", None))
+
+#       if self.config["METAX_AVAILABLE"] == 1:
+#           print("Verify manually removed frozen file marked as removed in METAX")
+#           response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_data["pid"]), auth=metax_user, verify=False)
+#           self.assertEqual(response.status_code, 404)
+
         # TODO If metax available, check only and all files associated with repair action are accesible in metax
+        # Retrieve PIDs of active files associated with project from metax and ensure count equal to files assocated with action
 
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done

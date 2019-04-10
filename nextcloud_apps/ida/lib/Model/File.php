@@ -51,7 +51,7 @@ class File extends Entity implements JsonSerializable
     protected $replicated;
     protected $removed;
     protected $cleared;
-    
+
     /**
      * Get JSON representation
      *
@@ -59,7 +59,7 @@ class File extends Entity implements JsonSerializable
      */
     public function jsonSerialize() {
         $values = array();
-    
+
         $values["id"] = $this->id;
         $values["pid"] = $this->pid;
         $values["node"] = (int)$this->node;
@@ -68,9 +68,6 @@ class File extends Entity implements JsonSerializable
         $values["pathname"] = $this->pathname;
         if ($this->size != null) {
             $values["size"] = (int)$this->size;
-        }
-        else {
-            $values["size"] = (int)0;
         }
         if ($this->checksum != null) {
             $values["checksum"] = $this->checksum;
@@ -93,8 +90,8 @@ class File extends Entity implements JsonSerializable
         if ($this->cleared != null) {
             $values["cleared"] = $this->cleared;
         }
-        
+
         return $values;
     }
-    
+
 }
