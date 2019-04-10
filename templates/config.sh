@@ -64,9 +64,10 @@ RABBIT_MONITORING_DIR="/mnt/rabbitmq_monitoring"
 
 METAX_AVAILABLE=1 # If 0, the metadata publication agent will not try to store metadata to METAX
 METAX_FILE_STORAGE_ID="urn:nbn:fi:att:file-storage-ida"
-METAX_API_ROOT_URL="https://localhost/rest/v1"
+METAX_API_ROOT_URL="https://localhost/rest"
+METAX_API_RPC_URL="https://localhost/rpc"
 METAX_API_USER="ida"
-METAX_API_PASS="test-ida"
+METAX_API_PASS="test"
 
 LDAP_HOST_URL="ldaps://ldaphost.domain.com"
 LDAP_BIND_USER="uid=username,ou=group,dc=domain,dc=com;"

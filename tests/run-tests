@@ -111,6 +111,16 @@ if [ $# -ge 1 ]; then
 
     /srv/venv-agents/bin/python -W ignore -m unittest discover -f -q $*
 
+    if [ $? -ne 0 ]; then
+        exit 1
+    fi
+
+    echo ""
+    echo "======================================"
+    echo "=== ALL EXECUTED TESTS SUCCESSFUL  ==="
+    echo "======================================"
+    echo ""
+
 else
 
     echo "UNIT TESTS:"

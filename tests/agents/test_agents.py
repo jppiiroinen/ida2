@@ -77,7 +77,7 @@ class TestAgents(unittest.TestCase):
             print("(cleaning)")
             cmd = "sudo -u %s %s/tests/utils/initialize_test_accounts flush %s/tests/utils/single-project.config" % (self.config["HTTPD_USER"], self.config["ROOT"], self.config["ROOT"])
             os.system(cmd)
-            if [ self.config["METAX_AVAILABLE"] == 0 ]:
+            if self.config["METAX_AVAILABLE"] != 1:
                 print('')
                 print("**************************************")
                 print("*** METAX INTEGRATION NOT TESTED!! ***")
@@ -155,6 +155,8 @@ class TestAgents(unittest.TestCase):
         file_pid = file_data["pid"]
 
         # TODO if metax is available, verify frozen file is accessible in metax
+        if self.config["METAX_AVAILABLE"] == 1:
+            None
 
         # --------------------------------------------------------------------------------
 
@@ -281,7 +283,7 @@ class TestAgents(unittest.TestCase):
         self.assertFalse(os.path.exists(pathname))
 
         print("Repair project")
-        response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), auth=pso_user_a, verify=False)
+        response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), headers=headers, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         action_data = response.json()
 
@@ -334,8 +336,7 @@ class TestAgents(unittest.TestCase):
         pathname = "%s/projects/test_project_a/2017-08/Experiment_2/baseline/test01.dat" % (self.config["DATA_REPLICATION_ROOT"])
         self.assertTrue(os.path.exists(pathname))
 
-        # publication:
-        # If metax available, check only and all files associated with repair action are accesible in metax
+        # TODO If metax available, check only and all files associated with repair action are accesible in metax
 
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done
