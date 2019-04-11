@@ -276,7 +276,6 @@ class TestAgents(unittest.TestCase):
             response = requests.get("%s/files?fields=identifier&project_identifier=test_project_a" % (self.config["METAX_API_ROOT_URL"]), auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 200)
             file_data = response.json()
-            print("METAX FILE COUNT BEFORE REPAIR: %s" % (file_data["count"]))
             self.assertEqual(file_data["count"], 9)
 
         print("Retrieve file details from already frozen file 1")
@@ -310,8 +309,14 @@ class TestAgents(unittest.TestCase):
         file_3_data = response.json()
 
         if self.config["METAX_AVAILABLE"] == 1:
+
             print("Update frozen file 3 record to set size to 999 and checksum to 'abcdef' in METAX")
-            data = {"identifier": file_3_data["pid"], "byte_size": 999, "checksum": { "value": "abcdef"} }
+            data = {"byte_size": 999, "checksum": { "value": "abcdef"} }
+            response = requests.patch("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 200)
+
+            print("Update frozen file 3 record to simulate legacy metadata stored in METAX")
+            data = { "file_characteristics_extension": { "foo": "bar" } }
             response = requests.patch("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 200)
 
@@ -339,8 +344,6 @@ class TestAgents(unittest.TestCase):
         cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config['HTTPD_USER'], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
-
-        # TODO if metax available, add custom metadata to frozen file in metax, to ensure it does not get lost by repair process
 
         print("Repair project")
         response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), headers=headers, auth=pso_user_a, verify=False)
@@ -388,12 +391,16 @@ class TestAgents(unittest.TestCase):
         self.assertNotEqual(file_3_data['replicated'], file_data['replicated'])
 
         if self.config["METAX_AVAILABLE"] == 1:
+
             print("Verify file details from post-repair frozen file 3 are repaired in METAX")
             response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_data["pid"]), auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 200)
             metax_file_data = response.json()
             self.assertEqual(metax_file_data["byte_size"], 2263)
             self.assertEqual(metax_file_data["checksum"]["value"], "8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168")
+
+            print("Verify simulated legacy metadata of post-repair frozen file 3 remains in METAX")
+            self.assertEqual(metax_file_data["file_characteristics_extension"]["foo"], "bar")
 
         print("Verify file details from post-repair file manually moved to frozen space are defined in IDA")
         data["pathname"] = "/2017-08/Experiment_2/baseline/test01.dat"
@@ -418,20 +425,16 @@ class TestAgents(unittest.TestCase):
             response = requests.get("%s/files?fields=identifier&project_identifier=test_project_a" % (self.config["METAX_API_ROOT_URL"]), auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 200)
             file_data = response.json()
-            print("METAX FILE COUNT AFTER REPAIR:  %s" % (file_data["count"]))
             self.assertEqual(file_data["count"], 19)
 
             print("Verify manually removed frozen file marked as removed in METAX")
             response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_4_data["pid"]), auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 404)
 
-            # TODO check repaired metadata for previously frozen file in metax, to ensure it was updated via patch request
-            # TODO check custom metadata for previously frozen file in metax, to ensure it was not lost by repair process
-
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done
 
-#       self.success = True
+        self.success = True
 
         # --------------------------------------------------------------------------------
         # TODO: consider which tests may be missing...
