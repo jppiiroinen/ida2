@@ -22,6 +22,7 @@
 #--------------------------------------------------------------------------------
 
 import os
+import requests
 
 from agents.common import GenericAgent
 from agents.utils.utils import construct_file_path, make_ba_http_header, current_time
@@ -226,15 +227,36 @@ class MetadataAgent(GenericAgent):
             nodes = self._get_nodes_associated_with_action(action)
 
         metadata_start_time = current_time()
+
         for node in nodes:
             node['metadata'] = metadata_start_time
 
         technical_metadata = self._aggregate_technical_metadata(action, nodes)
+
         self._publish_metadata(technical_metadata)
 
         self._save_nodes_to_db(nodes, fields=['metadata'])
         self._save_action_completion_timestamp(action, 'metadata')
         self._logger.info('Metadata publication OK')
+
+    def _process_metadata_repair(self, action, nodes):
+        self._logger.info('Processing metadata repair...')
+
+        if not nodes:
+            nodes = self._get_nodes_associated_with_action(action)
+
+        metadata_start_time = current_time()
+
+        for node in nodes:
+            node['metadata'] = metadata_start_time
+
+        technical_metadata = self._aggregate_technical_metadata(action, nodes)
+
+        self._repair_metadata(technical_metadata, action)
+
+        self._save_nodes_to_db(nodes, fields=['metadata'])
+        self._save_action_completion_timestamp(action, 'metadata')
+        self._logger.info('Metadata repair OK')
 
     def _aggregate_technical_metadata(self, action, nodes):
         self._logger.debug('Aggregating technical metadata...')
@@ -290,6 +312,33 @@ class MetadataAgent(GenericAgent):
             file_metadata['file_format'] = file_format
 
         return file_metadata
+
+    def _repair_metadata(self, technical_metadata, action):
+        """
+        Repair file metadata in Metax.
+        """
+        self._logger.debug('Repairing file metadata in metax...')
+
+        # retrieve PIDs of all active files associated with project
+        response = self._metax_api_request('get', '/files?fields=identifier&project_identifier=%s' % (action['project']))
+        if response.status_code != 200:
+            raise Exception(
+                'Failed to retrieve details of frozen files associated with project. HTTP status code: %d. Error messages: %s'
+                % (response.status_code, response.content)
+            )
+        file_data = response.json()
+        self._logger.debug('TOTAL FILES IN METAX: %s' % (len(file_data)))
+
+        # - derive PIDs of all files in technical metadata known to metax
+        # - extract descriptions of all files in technical metadata known to metax
+        # - PATCH metadata descriptions of all files in technical metadata known to metax
+        #
+        # - derive PIDs of all files in technical metadata NOT known to metax
+        # - extract descriptions of all files in technical metadata NOT known to metax
+        # - POST metadata descriptions of all files in technical metadata NOT known to metax
+        #
+        # - derive PIDs of all files known to metax but not in technical metadata
+        # - DELETE all files known to metax but not in technical metadata
 
     def _publish_metadata(self, technical_metadata):
         """
@@ -347,24 +396,6 @@ class MetadataAgent(GenericAgent):
         #self._save_action_completion_timestamp(action, 'replication')
         self._save_action_completion_timestamp(action, 'completed')
         self._logger.info('Metadata deletion OK')
-
-    def _process_checksums_repair(self, action, nodes):
-        # todo according to https://jira.eduuni.fi/browse/CSCIDA-283
-        # no need to contact metax at all
-        self._logger.info('Processing chceksums repair...')
-        self._save_action_completion_timestamp(action, 'checksums')
-        self._logger.info('Checksums repair OK')
-
-    def _process_metadata_repair(self, action, nodes):
-        # todo according to https://jira.eduuni.fi/browse/CSCIDA-283
-        # looks like the new repair spec for metadata repair is basically
-        # what repair-metadata script does when executed with the
-        # "exhaustive" parameter.
-        #
-        # probably try to re use parts of repair-metadata script here somehow.
-        self._logger.info('Processing metadata repair...')
-        self._save_action_completion_timestamp(action, 'metadata')
-        self._logger.info('Metadata repair OK')
 
     def _metax_api_request(self, method, detail_url, data=None):
         headers = {

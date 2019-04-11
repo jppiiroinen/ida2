@@ -140,6 +140,7 @@ class TestAgents(unittest.TestCase):
         self.assertTrue(os.path.exists("%s/2017-08/Experiment_1" % (frozen_area_root)))
 
         self.waitForPendingActions("test_project_a", test_user_a)
+        self.checkForFailedActions("test_project_a", test_user_a)
 
         print("Retrieve completed freeze action details")
         response = requests.get("%s/actions/%s" % (self.config["IDA_API_ROOT_URL"], action_pid), auth=test_user_a, verify=False)
@@ -197,6 +198,7 @@ class TestAgents(unittest.TestCase):
         self.assertTrue(os.path.exists("%s/2017-08/Experiment_1/test01.dat" % (staging_area_root)))
 
         self.waitForPendingActions("test_project_a", test_user_a)
+        self.checkForFailedActions("test_project_a", test_user_a)
 
         print("Retrieve completed unfreeze action details")
         response = requests.get("%s/actions/%s" % (self.config["IDA_API_ROOT_URL"], action_pid), auth=test_user_a, verify=False)
@@ -238,6 +240,7 @@ class TestAgents(unittest.TestCase):
         self.assertFalse(os.path.exists("%s/2017-08/Experiment_1/test02.dat" % (frozen_area_root)))
 
         self.waitForPendingActions("test_project_a", test_user_a)
+        self.checkForFailedActions("test_project_a", test_user_a)
 
         print("Retrieve completed delete action details")
         response = requests.get("%s/actions/%s" % (self.config["IDA_API_ROOT_URL"], action_pid), auth=test_user_a, verify=False)
@@ -315,6 +318,9 @@ class TestAgents(unittest.TestCase):
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
+        self.waitForPendingActions("test_project_a", test_user_a)
+        self.checkForFailedActions("test_project_a", test_user_a)
+
         print("Repair project")
         response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), headers=headers, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -388,7 +394,7 @@ class TestAgents(unittest.TestCase):
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done
 
-        self.success = True
+#       self.success = True
 
         # --------------------------------------------------------------------------------
         # TODO: consider which tests may be missing...
