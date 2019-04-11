@@ -269,6 +269,16 @@ class TestAgents(unittest.TestCase):
 
         print("--- Repair Action Postprocessing")
 
+        self.waitForPendingActions("test_project_a", test_user_a)
+        self.checkForFailedActions("test_project_a", test_user_a)
+
+        if self.config["METAX_AVAILABLE"] == 1:
+            response = requests.get("%s/files?fields=identifier&project_identifier=test_project_a" % (self.config["METAX_API_ROOT_URL"]), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 200)
+            file_data = response.json()
+            print("METAX FILE COUNT BEFORE REPAIR: %s" % (file_data["count"]))
+            self.assertEqual(file_data["count"], 9)
+
         print("Retrieve file details from already frozen file 1")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test01.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
@@ -293,33 +303,44 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         file_3_data = response.json()
 
-        print("Update frozen file 3 record to set size to 999 and checksum to 'abcdef'")
+        print("Update frozen file 3 record to set size to 999 and checksum to 'abcdef' in IDA")
         data = {"size": 999, "checksum": "abcdef"}
         response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_3_data = response.json()
+
+        if self.config["METAX_AVAILABLE"] == 1:
+            print("Update frozen file 3 record to set size to 999 and checksum to 'abcdef' in METAX")
+            data = {"identifier": file_3_data["pid"], "byte_size": 999, "checksum": { "value": "abcdef"} }
+            response = requests.patch("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 200)
 
         print("Physically delete replication of file 3")
         pathname = "%s/projects/test_project_a/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
         result = os.remove(pathname)
         self.assertFalse(os.path.exists(pathname))
 
-        print("Move folder from staging to frozen area")
-        result = shutil.move("%s/2017-08/Experiment_2" % (staging_area_root), "%s/2017-08/Experiment_2" % (frozen_area_root))
-        self.assertEqual(result, "%s/2017-08/Experiment_2" % (frozen_area_root))
+        print("Retrieve file details from already frozen file 4")
+        data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/test04.dat"}
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_4_data = response.json()
 
-        print("Physically delete previously frozen file from frozen area")
+        print("Physically delete previously frozen file 4 from frozen area")
         pathname = "%s/2017-08/Experiment_1/test04.dat" % (frozen_area_root)
         result = os.remove(pathname)
         self.assertFalse(os.path.exists(pathname))
+
+        print("Physically move folder from staging to frozen area")
+        result = shutil.move("%s/2017-08/Experiment_2" % (staging_area_root), "%s/2017-08/Experiment_2" % (frozen_area_root))
+        self.assertEqual(result, "%s/2017-08/Experiment_2" % (frozen_area_root))
 
         print("Update Nextcloud file database")
         cmd = "sudo -u %s %s/nextcloud/occ files:scan PSO_test_project_a" % (self.config['HTTPD_USER'], self.config["ROOT"])
         result = os.system(cmd)
         self.assertEqual(result, 0)
 
-        self.waitForPendingActions("test_project_a", test_user_a)
-        self.checkForFailedActions("test_project_a", test_user_a)
+        # TODO if metax available, add custom metadata to frozen file in metax, to ensure it does not get lost by repair process
 
         print("Repair project")
         response = requests.post("%s/repair?project=test_project_a" % (self.config["IDA_API_ROOT_URL"]), headers=headers, auth=pso_user_a, verify=False)
@@ -346,7 +367,7 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(file_1_data['frozen'], file_data['frozen'])
         self.assertEqual(file_1_data['replicated'], file_data['replicated'])
 
-        print("Verify file details from post-repair frozen file 2 are repaired")
+        print("Verify file details from post-repair frozen file 2 are repaired in IDA")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test02.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -355,7 +376,7 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(file_data["checksum"], "c5a8e40a8afaebf3d8429266a6f54ef52eff14dcd22cb64a59a06e4d724eebb9")
         self.assertEqual(file_2_data['replicated'], file_data['replicated'])
 
-        print("Verify file details from post-repair frozen file 3 are repaired")
+        print("Verify file details from post-repair frozen file 3 are repaired in IDA")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test03.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -366,7 +387,15 @@ class TestAgents(unittest.TestCase):
         self.assertTrue(os.path.exists(pathname))
         self.assertNotEqual(file_3_data['replicated'], file_data['replicated'])
 
-        print("Verify file details from post-repair file manually moved to frozen space are defined")
+        if self.config["METAX_AVAILABLE"] == 1:
+            print("Verify file details from post-repair frozen file 3 are repaired in METAX")
+            response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_data["pid"]), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 200)
+            metax_file_data = response.json()
+            self.assertEqual(metax_file_data["byte_size"], 2263)
+            self.assertEqual(metax_file_data["checksum"]["value"], "8950fc9b4292a82cfd1b5e6bbaec578ed00ac9a9c27bf891130f198fef2f0168")
+
+        print("Verify file details from post-repair file manually moved to frozen space are defined in IDA")
         data["pathname"] = "/2017-08/Experiment_2/baseline/test01.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -383,13 +412,21 @@ class TestAgents(unittest.TestCase):
         file_data = response.json()
         self.assertIsNotNone(file_data.get("cleared", None))
 
-#       if self.config["METAX_AVAILABLE"] == 1:
-#           print("Verify manually removed frozen file marked as removed in METAX")
-#           response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_data["pid"]), auth=metax_user, verify=False)
-#           self.assertEqual(response.status_code, 404)
+        if self.config["METAX_AVAILABLE"] == 1:
 
-        # TODO If metax available, check only and all files associated with repair action are accesible in metax
-        # Retrieve PIDs of active files associated with project from metax and ensure count equal to files assocated with action
+            print("Verify correct number of frozen files active in METAX")
+            response = requests.get("%s/files?fields=identifier&project_identifier=test_project_a" % (self.config["METAX_API_ROOT_URL"]), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 200)
+            file_data = response.json()
+            print("METAX FILE COUNT AFTER REPAIR:  %s" % (file_data["count"]))
+            self.assertEqual(file_data["count"], 19)
+
+            print("Verify manually removed frozen file marked as removed in METAX")
+            response = requests.get("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_4_data["pid"]), auth=metax_user, verify=False)
+            self.assertEqual(response.status_code, 404)
+
+            # TODO check repaired metadata for previously frozen file in metax, to ensure it was updated via patch request
+            # TODO check custom metadata for previously frozen file in metax, to ensure it was not lost by repair process
 
         # --------------------------------------------------------------------------------
         # If all tests passed, record success, in which case tearDown will be done

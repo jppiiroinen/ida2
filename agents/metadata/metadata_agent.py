@@ -319,7 +319,13 @@ class MetadataAgent(GenericAgent):
         """
         self._logger.debug('Repairing file metadata in metax...')
 
-        # retrieve PIDs of all active files associated with project
+        existing_file_pids = []
+        active_file_pids = []
+        existing_files = []
+        new_files = []
+        removed_file_pids = []
+
+        # retrieve PIDs of all active files known by metax which are associated with project
         response = self._metax_api_request('get', '/files?fields=identifier&project_identifier=%s' % (action['project']))
         if response.status_code != 200:
             raise Exception(
@@ -327,18 +333,120 @@ class MetadataAgent(GenericAgent):
                 % (response.status_code, response.content)
             )
         file_data = response.json()
-        self._logger.debug('TOTAL FILES IN METAX: %s' % (len(file_data)))
+        for record in file_data['results']:
+            existing_file_pids.append(record['identifier'])
 
-        # - derive PIDs of all files in technical metadata known to metax
-        # - extract descriptions of all files in technical metadata known to metax
-        # - PATCH metadata descriptions of all files in technical metadata known to metax
-        #
-        # - derive PIDs of all files in technical metadata NOT known to metax
-        # - extract descriptions of all files in technical metadata NOT known to metax
-        # - POST metadata descriptions of all files in technical metadata NOT known to metax
-        #
-        # - derive PIDs of all files known to metax but not in technical metadata
-        # - DELETE all files known to metax but not in technical metadata
+        # segregate descriptions of all files in technical metadata based on whether they are known to metax or not
+        for record in technical_metadata:
+            if record['identifier'] in existing_file_pids:
+                existing_files.append(record)
+            else:
+                new_files.append(record)
+            active_file_pids.append(record['identifier'])
+
+        # extract PIDs of all files known to metax which are no longer actively frozen
+        for pid in existing_file_pids:
+            if pid not in active_file_pids:
+                removed_file_pids.append(pid)
+
+        self._logger.debug('ACTIVE FILE COUNT:   %s' % (len(active_file_pids)))
+        self._logger.debug('EXISTING FILE COUNT: %s' % (len(existing_files)))
+        self._logger.debug('NEW FILE COUNT:      %s' % (len(new_files)))
+        self._logger.debug('REMOVED FILE COUNT:  %s' % (len(removed_file_pids)))
+
+        # PATCH metadata descriptions of all existing files
+
+        response = self._metax_api_request('patch', '/files', data=existing_files)
+
+        if response.status_code not in (200, 201, 204):
+            try:
+                response_json = response.json()
+            except:
+                raise Exception(
+                    'Metadata update failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                    % (response.status_code, response.content)
+                )
+
+            if 'failed' in response_json:
+                errors = []
+                for i, entry in enumerate(response_json['failed']):
+                    errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                    if i > 10:
+                        break
+
+                raise Exception(
+                    'Metadata update failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
+                    % (response.status_code, len(errors), '\n'.join(errors))
+                )
+
+            # some unexpected type of error...
+            raise Exception(
+                'Metadata update failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                % (response.status_code, response.content)
+            )
+
+        # POST metadata descriptions of all new files
+
+        response = self._metax_api_request('post', '/files', data=new_files)
+
+        if response.status_code not in (200, 201, 204):
+            try:
+                response_json = response.json()
+            except:
+                raise Exception(
+                    'Metadata publication failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                    % (response.status_code, response.content)
+                )
+
+            if 'failed' in response_json:
+                errors = []
+                for i, entry in enumerate(response_json['failed']):
+                    errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                    if i > 10:
+                        break
+
+                raise Exception(
+                    'Metadata publication failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
+                    % (response.status_code, len(errors), '\n'.join(errors))
+                )
+
+            # some unexpected type of error...
+            raise Exception(
+                'Metadata publication failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                % (response.status_code, response.content)
+            )
+
+        # DELETE metadata descriptions of all removed files
+
+        response = self._metax_api_request('delete', '/files', data=removed_file_pids)
+
+        if response.status_code not in (200, 201, 204):
+            try:
+                response_json = response.json()
+            except:
+                raise Exception(
+                    'Metadata deletion failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                    % (response.status_code, response.content)
+                )
+
+            if 'failed' in response_json:
+                errors = []
+                for i, entry in enumerate(response_json['failed']):
+                    errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                    if i > 10:
+                        break
+
+                raise Exception(
+                    'Metadata deletion failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
+                    % (response.status_code, len(errors), '\n'.join(errors))
+                )
+
+            # some unexpected type of error...
+            raise Exception(
+                'Metadata deletion failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                % (response.status_code, response.content)
+            )
+
 
     def _publish_metadata(self, technical_metadata):
         """
@@ -393,7 +501,6 @@ class MetadataAgent(GenericAgent):
         # done. that would then trigger the API to place the completed-timestamp. for convenience right now though,
         # immediately place the replication-timestamp. once some processing will happen in replication for deletion,
         # move this to its correct place.
-        #self._save_action_completion_timestamp(action, 'replication')
         self._save_action_completion_timestamp(action, 'completed')
         self._logger.info('Metadata deletion OK')
 
