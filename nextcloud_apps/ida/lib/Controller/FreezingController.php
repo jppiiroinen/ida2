@@ -1486,8 +1486,14 @@ class FreezingController extends Controller
 
                     // Ensure technical metadata is accurately recorded for cloned file record
 
-                    $newFileEntity->setSize(0 + $fileInfo->getSize());
-                    $newFileEntity->setModified(Generate::newTimestamp($fileInfo->getMTime()));
+                    if ($newFileEntity->getSize() == null) {
+                        $newFileEntity->setSize(0 + $fileInfo->getSize());
+                        // If the size was unknown, assume the checksum is invalid and purge it (to be repaired by the agent)
+                        $newFileEntity->setChecksum(null);
+                    }
+                    if ($newFileEntity->getModified() == null) {
+                        $newFileEntity->setModified(Generate::newTimestamp($fileInfo->getMTime()));
+                    }
                     if ($newFileEntity->getFrozen() == null) {
                         $newFileEntity->setFrozen($timestamp);
                     }
