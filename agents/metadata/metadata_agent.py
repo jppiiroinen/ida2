@@ -326,13 +326,17 @@ class MetadataAgent(GenericAgent):
         removed_file_pids = []
 
         # retrieve PIDs of all active files known by metax which are associated with project
-        response = self._metax_api_request('get', '/files?fields=identifier&project_identifier=%s' % (action['project']))
+        response = self._metax_api_request('get', '/files?fields=identifier&project_identifier=%s&limit=100000000' % (action['project']))
+        # TODO Find more elegant way to unset limit rather than specify insanely high limit
         if response.status_code != 200:
             raise Exception(
                 'Failed to retrieve details of frozen files associated with project. HTTP status code: %d. Error messages: %s'
                 % (response.status_code, response.content)
             )
         file_data = response.json()
+        recieved_count= len(file_data['results'])
+        if file_data['count'] != recieved_count:
+            raise Exception('Failed to retrieve all records: total = %d returned = %d' % (file_data['count'], recieved_count))
         for record in file_data['results']:
             existing_file_pids.append(record['identifier'])
 
@@ -454,6 +458,9 @@ class MetadataAgent(GenericAgent):
         """
         self._logger.debug('Publishing file metadata to metax...')
 
+        # TODO Determine if use of ignore_already_exists_errors is correct, or whether an error should be raised
+        # if there exists a record for an active file in metax, since that should not be possible if IDA is working
+        # correctly... or whether a similar treatment to repair actions should be used, with both POST and PATCH...
         response = self._metax_api_request('post', '/files?ignore_already_exists_errors=true', data=technical_metadata)
 
         if response.status_code not in (200, 201, 204):

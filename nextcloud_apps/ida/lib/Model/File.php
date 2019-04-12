@@ -66,7 +66,6 @@ class File extends Entity implements JsonSerializable
         $values["action"] = $this->action;
         $values["project"] = $this->project;
         $values["pathname"] = $this->pathname;
-        //$values["size"] = (int)0;
         if ($this->size != null) {
             $values["size"] = (int)$this->size;
         }
