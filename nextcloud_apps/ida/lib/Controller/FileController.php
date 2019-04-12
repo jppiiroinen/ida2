@@ -100,6 +100,8 @@ class FileController extends Controller
                 return API::badRequestErrorResponse($e->getMessage());
             }
 
+            $queryProjects = null;
+
             // Special case to retrieve all file details for all actions for one or more projects, used for admin operations only
 
             if (($this->userId === 'admin') && ($pid === "all") && ($projects !== null)) {
