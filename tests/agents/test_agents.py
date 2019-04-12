@@ -318,11 +318,16 @@ class TestAgents(unittest.TestCase):
             data = {"byte_size": 999, "checksum": { "value": "abcdef"} }
             response = requests.patch("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 200)
+            metax_file_data = response.json()
+            self.assertEqual(metax_file_data["byte_size"], 999)
+            self.assertEqual(metax_file_data["checksum"]["value"], "abcdef")
 
             print("Update frozen file 3 record to simulate legacy metadata stored in METAX")
             data = { "file_characteristics_extension": { "foo": "bar" } }
             response = requests.patch("%s/files/%s" % (self.config["METAX_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=metax_user, verify=False)
             self.assertEqual(response.status_code, 200)
+            metax_file_data = response.json()
+            self.assertEqual(metax_file_data["file_characteristics_extension"]["foo"], "bar")
 
         print("Physically delete replication of file 3")
         pathname = "%s/projects/test_project_a/2017-08/Experiment_1/baseline/test03.dat" % (self.config["DATA_REPLICATION_ROOT"])
