@@ -295,6 +295,8 @@ class TestAgents(unittest.TestCase):
         response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_2_data["pid"]), json=data, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_2_data = response.json()
+        self.assertIsNone(file_2_data.get("size", None))
+        self.assertIsNone(file_2_data.get("checksum", None))
 
         print("Retrieve file details from already frozen file 3")
         data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/baseline/test03.dat"}
@@ -307,6 +309,8 @@ class TestAgents(unittest.TestCase):
         response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_3_data["pid"]), json=data, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_3_data = response.json()
+        self.assertEqual(file_3_data["size"], 999)
+        self.assertEqual(file_3_data["checksum"], "abcdef")
 
         if self.config["METAX_AVAILABLE"] == 1:
 
