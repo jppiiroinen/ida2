@@ -1470,7 +1470,7 @@ class FreezingController extends Controller
 
                 if ($fileEntity != null) {
 
-                    // Clone existing file record
+                    // Clone existing file record, associating it with the repair action
 
                     $newFileEntity = $this->cloneFile($fileEntity, $pid);
 
@@ -1484,10 +1484,12 @@ class FreezingController extends Controller
                     $newFileEntity->setRemoved(null);
                     $newFileEntity->setCleared(null);
 
-                    // If cloned file record has no frozen timestamp, set to current time
+                    // Ensure technical metadata is accurately recorded for cloned file record
 
+                    $newFileEntity->setSize(0 + $fileInfo->getSize());
+                    $newFileEntity->setModified(Generate::newTimestamp($fileInfo->getMTime()));
                     if ($newFileEntity->getFrozen() == null) {
-                        $newFileEntity->setFrozen(Generate::newTimestamp());
+                        $newFileEntity->setFrozen($timestamp);
                     }
 
                     $this->fileMapper->update($newFileEntity);
