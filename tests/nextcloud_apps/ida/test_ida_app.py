@@ -155,6 +155,7 @@ class TestIdaApp(unittest.TestCase):
         file_data = response.json()
         self.assertEqual(file_data["pathname"], data["pathname"])
         self.assertEqual(file_data["pid"], file_pid)
+        self.assertEqual(file_data["size"], 446)
 
         print("Retrieve frozen file details by PID")
         response = requests.get("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_pid), auth=test_user_a, verify=False)
@@ -163,6 +164,7 @@ class TestIdaApp(unittest.TestCase):
         self.assertEqual(file_data_2["pid"], file_data["pid"])
         self.assertEqual(file_data_2["project"], file_data["project"])
         self.assertEqual(file_data_2["pathname"], file_data["pathname"])
+        self.assertEqual(file_data["size"], 446)
 
         print("Freeze a folder")
         data["pathname"] = "/2017-08/Experiment_1"

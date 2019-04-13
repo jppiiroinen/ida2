@@ -286,13 +286,20 @@ class TestAgents(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         file_1_data = response.json()
 
+        print("Update frozen file 1 record to set checksum to null in IDA")
+        data = {"checksum": "null"}
+        response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_1_data["pid"]), json=data, auth=pso_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_1_data = response.json()
+        self.assertIsNone(file_1_data.get("checksum", None))
+
         print("Retrieve file details from already frozen file 2")
         data["pathname"] = "/2017-08/Experiment_1/baseline/test02.dat"
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_2_data = response.json()
 
-        print("Update frozen file 2 record to set size and checksum to null")
+        print("Update frozen file 2 record to set both size and checksum to null in IDA")
         data = {"size": "null", "checksum": "null"}
         response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_2_data["pid"]), json=data, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -377,15 +384,15 @@ class TestAgents(unittest.TestCase):
         file_set_data = response.json()
         self.assertEqual(len(file_set_data), 19)
 
-        print("Verify file details from previously frozen file 1 are unchanged")
+        print("Verify file details from post-repair frozen file 1 are repaired in IDA")
         data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/baseline/test01.dat"}
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_data = response.json()
+        self.assertEqual(file_data["size"], 446)
+        self.assertEqual(file_data["checksum"], "56293a80e0394d252e995f2debccea8223e4b5b2b150bee212729b3b39ac4d46")
         self.assertEqual(file_1_data['pid'], file_data['pid'])
         self.assertEqual(file_1_data['pathname'], file_data['pathname'])
-        self.assertEqual(file_1_data['size'], file_data['size'])
-        self.assertEqual(file_1_data['checksum'], file_data['checksum'])
         self.assertEqual(file_1_data['frozen'], file_data['frozen'])
         self.assertEqual(file_1_data['replicated'], file_data['replicated'])
 
