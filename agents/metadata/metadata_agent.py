@@ -353,103 +353,114 @@ class MetadataAgent(GenericAgent):
             if pid not in active_file_pids:
                 removed_file_pids.append(pid)
 
-        self._logger.debug('ACTIVE FILE COUNT:   %s' % (len(active_file_pids)))
-        self._logger.debug('EXISTING FILE COUNT: %s' % (len(existing_files)))
-        self._logger.debug('NEW FILE COUNT:      %s' % (len(new_files)))
-        self._logger.debug('REMOVED FILE COUNT:  %s' % (len(removed_file_pids)))
+        active_file_count   = len(active_file_pids)
+        existing_file_count = len(existing_files)
+        new_file_count      = len(new_files)
+        removed_file_count  = len(removed_file_pids)
+
+        self._logger.debug('ACTIVE FILE COUNT:   %d' % (active_file_count))
+        self._logger.debug('EXISTING FILE COUNT: %d' % (existing_file_count))
+        self._logger.debug('NEW FILE COUNT:      %d' % (new_file_count))
+        self._logger.debug('REMOVED FILE COUNT:  %d' % (removed_file_count))
 
         # PATCH metadata descriptions of all existing files
 
-        response = self._metax_api_request('patch', '/files', data=existing_files)
+        if existing_file_count > 0:
 
-        if response.status_code not in (200, 201, 204):
-            try:
-                response_json = response.json()
-            except:
+            response = self._metax_api_request('patch', '/files', data=existing_files)
+
+            if response.status_code not in (200, 201, 204):
+                try:
+                    response_json = response.json()
+                except:
+                    raise Exception(
+                        'Metadata update failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                        % (response.status_code, response.content)
+                    )
+
+                if 'failed' in response_json:
+                    errors = []
+                    for i, entry in enumerate(response_json['failed']):
+                        errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                        if i > 10:
+                            break
+
+                    raise Exception(
+                        'Metadata update failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
+                        % (response.status_code, len(errors), '\n'.join(errors))
+                    )
+
+                # some unexpected type of error...
                 raise Exception(
                     'Metadata update failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
                     % (response.status_code, response.content)
                 )
 
-            if 'failed' in response_json:
-                errors = []
-                for i, entry in enumerate(response_json['failed']):
-                    errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
-                    if i > 10:
-                        break
-
-                raise Exception(
-                    'Metadata update failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
-                    % (response.status_code, len(errors), '\n'.join(errors))
-                )
-
-            # some unexpected type of error...
-            raise Exception(
-                'Metadata update failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
-                % (response.status_code, response.content)
-            )
-
         # POST metadata descriptions of all new files
 
-        response = self._metax_api_request('post', '/files', data=new_files)
+        if new_file_count > 0:
 
-        if response.status_code not in (200, 201, 204):
-            try:
-                response_json = response.json()
-            except:
+            response = self._metax_api_request('post', '/files', data=new_files)
+
+            if response.status_code not in (200, 201, 204):
+                try:
+                    response_json = response.json()
+                except:
+                    raise Exception(
+                        'Metadata publication failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                        % (response.status_code, response.content)
+                    )
+
+                if 'failed' in response_json:
+                    errors = []
+                    for i, entry in enumerate(response_json['failed']):
+                        errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                        if i > 10:
+                            break
+
+                    raise Exception(
+                        'Metadata publication failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
+                        % (response.status_code, len(errors), '\n'.join(errors))
+                    )
+
+                # some unexpected type of error...
                 raise Exception(
                     'Metadata publication failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
                     % (response.status_code, response.content)
                 )
 
-            if 'failed' in response_json:
-                errors = []
-                for i, entry in enumerate(response_json['failed']):
-                    errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
-                    if i > 10:
-                        break
-
-                raise Exception(
-                    'Metadata publication failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
-                    % (response.status_code, len(errors), '\n'.join(errors))
-                )
-
-            # some unexpected type of error...
-            raise Exception(
-                'Metadata publication failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
-                % (response.status_code, response.content)
-            )
-
         # DELETE metadata descriptions of all removed files
 
-        response = self._metax_api_request('delete', '/files', data=removed_file_pids)
+        if removed_file_count > 0:
 
-        if response.status_code not in (200, 201, 204):
-            try:
-                response_json = response.json()
-            except:
+            response = self._metax_api_request('delete', '/files', data=removed_file_pids)
+
+            if response.status_code not in (200, 201, 204):
+                try:
+                    response_json = response.json()
+                except:
+                    raise Exception(
+                        'Metadata deletion failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
+                        % (response.status_code, response.content)
+                    )
+
+                if 'failed' in response_json:
+                    errors = []
+                    for i, entry in enumerate(response_json['failed']):
+                        errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
+                        if i > 10:
+                            break
+
+                    raise Exception(
+                        'Metadata deletion failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
+                        % (response.status_code, len(errors), '\n'.join(errors))
+                    )
+
+                # some unexpected type of error...
                 raise Exception(
                     'Metadata deletion failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
                     % (response.status_code, response.content)
                 )
-
-            if 'failed' in response_json:
-                errors = []
-                for i, entry in enumerate(response_json['failed']):
-                    errors.append(str({ 'identifier': entry['object']['identifier'], 'errors': entry['errors'] }))
-                    if i > 10:
-                        break
-
-                raise Exception(
-                    'Metadata deletion failed, Metax returned an error. HTTP status code: %d. First %d errors: %s'
-                    % (response.status_code, len(errors), '\n'.join(errors))
-                )
-
-            # some unexpected type of error...
-            raise Exception(
-                'Metadata deletion failed, Metax returned an error. HTTP status code: %d. Error messages: %s'
-                % (response.status_code, response.content)
-            )
 
 
     def _publish_metadata(self, technical_metadata):
