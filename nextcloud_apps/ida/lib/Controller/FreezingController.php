@@ -1486,7 +1486,7 @@ class FreezingController extends Controller
 
                     // Ensure technical metadata is accurately recorded for cloned file record
 
-                    if ($newFileEntity->getSize() == null) {
+                    if ($newFileEntity->getSize() === null) {
                         $newFileEntity->setSize(0 + $fileInfo->getSize());
                         // If the size was unknown, assume the checksum is invalid and purge it (to be repaired by the agent)
                         $newFileEntity->setChecksum(null);
@@ -1979,7 +1979,7 @@ class FreezingController extends Controller
         $newFileEntity->setPid($fileEntity->getPid());
         $newFileEntity->setType($fileEntity->getType());
         $newFileEntity->setProject($fileEntity->getProject());
-        $newFileEntity->setSize($fileEntity->getSize());
+        $newFileEntity->setSize(0 + $fileEntity->getSize());
         $newFileEntity->setChecksum($fileEntity->getChecksum());
         $newFileEntity->setModified($fileEntity->getModified());
         $newFileEntity->setFrozen($fileEntity->getFrozen());

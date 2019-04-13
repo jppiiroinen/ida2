@@ -186,6 +186,13 @@ class TestIdaApp(unittest.TestCase):
         original_freeze_folder_action_pid = action_pid
         original_freeze_folder_action_file_count = 10
 
+        print("Retrieve file details from specific frozen file")
+        data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/.hidden_file"}
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_x_data = response.json()
+        self.assertEqual(file_x_data.get('size', None), 0)
+
         # --------------------------------------------------------------------------------
 
         print("--- Unfreeze Actions")

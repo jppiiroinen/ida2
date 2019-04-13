@@ -66,28 +66,28 @@ class File extends Entity implements JsonSerializable
         $values["action"] = $this->action;
         $values["project"] = $this->project;
         $values["pathname"] = $this->pathname;
-        if ($this->size != null) {
+        if ($this->size !== null) {
             $values["size"] = (int)$this->size;
         }
-        if ($this->checksum != null) {
+        if ($this->checksum !== null) {
             $values["checksum"] = $this->checksum;
         }
-        if ($this->modified != null) {
+        if ($this->modified !== null) {
             $values["modified"] = $this->modified;
         }
-        if ($this->frozen != null) {
+        if ($this->frozen !== null) {
             $values["frozen"] = $this->frozen;
         }
-        if ($this->metadata != null) {
+        if ($this->metadata !== null) {
             $values["metadata"] = $this->metadata;
         }
-        if ($this->replicated != null) {
+        if ($this->replicated !== null) {
             $values["replicated"] = $this->replicated;
         }
-        if ($this->removed != null) {
+        if ($this->removed !== null) {
             $values["removed"] = $this->removed;
         }
-        if ($this->cleared != null) {
+        if ($this->cleared !== null) {
             $values["cleared"] = $this->cleared;
         }
 

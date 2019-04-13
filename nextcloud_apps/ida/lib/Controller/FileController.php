@@ -391,22 +391,22 @@ class FileController extends Controller
 
             // Set all allowed specified parameter values
 
-            if ($size != null) {
-                $fileEntity->setSize($size);
+            if ($size !== null) {
+                $fileEntity->setSize(0 + $size);
             }
-            if ($checksum != null) {
+            if ($checksum !== null) {
                 $fileEntity->setChecksum((trim($checksum) === '') ? null : $checksum);
             }
-            if ($metadata != null) {
+            if ($metadata !== null) {
                 $fileEntity->setMetadata($metadata);
             }
-            if ($replicated != null) {
+            if ($replicated !== null) {
                 $fileEntity->setReplication($replicated);
             }
-            if ($removed != null) {
+            if ($removed !== null) {
                 $fileEntity->setRemoved($removed);
             }
-            if ($cleared != null) {
+            if ($cleared !== null) {
                 $fileEntity->setCleared($cleared);
             }
 
@@ -496,28 +496,28 @@ class FileController extends Controller
 
             // Set all allowed specified parameter values and update database record
 
-            if ($size != null) {
-                $fileEntity->setSize($size);
+            if ($size !== null) {
+                $fileEntity->setSize(0 + $size);
             }
-            if ($checksum != null) {
+            if ($checksum !== null) {
                 $fileEntity->setChecksum((trim($checksum) === '') ? null : $checksum);
             }
-            if ($modified != null) {
+            if ($modified !== null) {
                 $fileEntity->setModified($modified);
             }
-            if ($frozen != null) {
+            if ($frozen !== null) {
                 $fileEntity->setFrozen($frozen);
             }
-            if ($metadata != null) {
+            if ($metadata !== null) {
                 $fileEntity->setMetadata($metadata);
             }
-            if ($replicated != null) {
+            if ($replicated !== null) {
                 $fileEntity->setReplicated($replicated);
             }
-            if ($removed != null) {
+            if ($removed !== null) {
                 $fileEntity->setRemoved($removed);
             }
-            if ($cleared != null) {
+            if ($cleared !== null) {
                 $fileEntity->setCleared($cleared);
             }
 
