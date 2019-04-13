@@ -66,6 +66,9 @@ class File extends Entity implements JsonSerializable
         $values["action"] = $this->action;
         $values["project"] = $this->project;
         $values["pathname"] = $this->pathname;
+        // It is possible, albeit rare, that some legacy records have no size recorded if/when the file size was zero.
+        // So handle such rare cases here by defaulting to a file size of zero...
+        $values["size"] = 0;
         if ($this->size !== null) {
             $values["size"] = (int)$this->size;
         }

@@ -186,7 +186,7 @@ class TestIdaApp(unittest.TestCase):
         original_freeze_folder_action_pid = action_pid
         original_freeze_folder_action_file_count = 10
 
-        print("Retrieve file details from specific frozen file")
+        print("Retrieve file details from zero size hidden frozen file")
         data = {"project": "test_project_a", "pathname": "/2017-08/Experiment_1/.hidden_file"}
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -1195,7 +1195,7 @@ class TestIdaApp(unittest.TestCase):
         original_first_file_pid = file_data["pid"]
         original_first_file_pathname = file_data["pathname"]
 
-        print("Retrieve file details from specific frozen file")
+        print("Retrieve file details from zero size hidden frozen file")
         data = {"project": "test_project_d", "pathname": "/2017-08/Experiment_1/.hidden_file"}
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_d, verify=False)
         self.assertEqual(response.status_code, 200)
@@ -1240,7 +1240,7 @@ class TestIdaApp(unittest.TestCase):
         self.assertIsNotNone(file_data.get("frozen", None))
         self.assertIsNotNone(file_data.get("cleared", None))
 
-        print("Retrieve file details from specific frozen file")
+        print("Retrieve file details from zero size hidden frozen file")
         data = {"project": "test_project_d", "pathname": "/2017-08/Experiment_1/.hidden_file"}
         response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_d, verify=False)
         self.assertEqual(response.status_code, 200)
