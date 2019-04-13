@@ -1159,8 +1159,6 @@ class TestIdaApp(unittest.TestCase):
 
         print("--- Repair Actions")
 
-        # TODO add checks for postprocessing results once repair handling is added to postprocessing agents
-
         print("Freeze a folder")
         data = {"project": "test_project_d", "pathname": "/2017-08/Experiment_1"}
         response = requests.post("%s/freeze" % self.config["IDA_API_ROOT_URL"], json=data, auth=test_user_d, verify=False)
@@ -1189,6 +1187,13 @@ class TestIdaApp(unittest.TestCase):
         original_first_file_record_id = file_data["id"]
         original_first_file_pid = file_data["pid"]
         original_first_file_pathname = file_data["pathname"]
+
+        print("Retrieve file details from specific frozen file")
+        data = {"project": "test_project_d", "pathname": "/2017-08/Experiment_1/.hidden_file"}
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_d, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_x_data = response.json()
+        self.assertEqual(file_x_data.get('size', None), 0)
 
         print("Repair project...")
         response = requests.post("%s/repair" % self.config["IDA_API_ROOT_URL"], auth=pso_user_d, verify=False)
@@ -1227,6 +1232,15 @@ class TestIdaApp(unittest.TestCase):
         # Original frozen file record should be both frozen and also now cleared
         self.assertIsNotNone(file_data.get("frozen", None))
         self.assertIsNotNone(file_data.get("cleared", None))
+
+        print("Retrieve file details from specific frozen file")
+        data = {"project": "test_project_d", "pathname": "/2017-08/Experiment_1/.hidden_file"}
+        response = requests.get("%s/files/byProjectPathname/%s" % (self.config["IDA_API_ROOT_URL"], data["project"]), json=data, auth=test_user_d, verify=False)
+        self.assertEqual(response.status_code, 200)
+        file_x_data = response.json()
+        self.assertEqual(file_x_data.get('size', None), 0)
+
+        # NOTE tests for postprocessing results of repair action are handled in /tests/agents/test_agents.py
 
         # --------------------------------------------------------------------------------
 
