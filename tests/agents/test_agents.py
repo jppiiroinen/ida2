@@ -269,6 +269,8 @@ class TestAgents(unittest.TestCase):
 
         print("--- Repair Action Postprocessing")
 
+        # TODO Include more files in repair actions, more than 10 files total and 2-3 min new and deleted files...
+
         self.waitForPendingActions("test_project_a", test_user_a)
         self.checkForFailedActions("test_project_a", test_user_a)
 

@@ -274,8 +274,14 @@ class MetadataAgent(GenericAgent):
         """
         Gather metadata for a single node of type 'file', in a form that is accepted by Metax
         """
+
+        try:
+            byte_size = node['size']
+        except:
+            byte_size = 0 # TODO Fix IDA / Nextcloud
+
         file_metadata = {
-            'byte_size': node['size'],
+            'byte_size': byte_size,
             'checksum': {
                 'value': node['checksum'],
                 'algorithm': 'sha2',
