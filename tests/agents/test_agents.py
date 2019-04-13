@@ -297,7 +297,8 @@ class TestAgents(unittest.TestCase):
         response = requests.post("%s/files/%s" % (self.config["IDA_API_ROOT_URL"], file_2_data["pid"]), json=data, auth=pso_user_a, verify=False)
         self.assertEqual(response.status_code, 200)
         file_2_data = response.json()
-        self.assertIsNone(file_2_data.get("size", None))
+        # Undefined file size should result in default value of 0
+        self.assertEquals(file_2_data.get("size", None), 0)
         self.assertIsNone(file_2_data.get("checksum", None))
 
         print("Retrieve file details from already frozen file 3")
